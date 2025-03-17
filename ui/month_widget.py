@@ -1,8 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QSizePolicy, QHBoxLayout
+from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QSizePolicy
 from ui.util.flow_layout import FlowLayout
-from PyQt6.QtGui import QPixmap
-from PyQt6.QtCore import Qt
-import os
+from ui.util.thumbnail_widget import ThumbnailWidget
 
 def numeric_to_text(numeric):
   year_str, month_num = tuple(numeric.split('-'))
@@ -12,30 +10,33 @@ def numeric_to_text(numeric):
 
 
 class MonthWidget(QWidget):
-  def __init__(self, yearmonth_numeric_str, images):
+  def __init__(self, yearmonth_numeric_str, images=None):
     super().__init__()
     layout = QVBoxLayout(self)
+    # whether or not we are in view
+    self.is_in_view = False
+    # The text (e.g. 'March 2025')
     label = QLabel(numeric_to_text(yearmonth_numeric_str))
     label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed) 
     layout.addWidget(label)
     
+    # Widget to hold thumbnails for all images for this month
     self.thumbnails_container = QWidget()
-    container_layout = FlowLayout()
-    container_layout.setSpacing(10)
+    self.container_layout = FlowLayout()
+    self.container_layout.setSpacing(10)
+    
+    # our list of images, so we can show/hide them @ "runtime" (everything is at runtime but you get the idea)
+    self.thumb_widgets = []
 
+    # add all the images for the month into the container
     num_images = len(images)
     for i in range(num_images - 1, -1, -1):
       (thumb_path,) = images[i]
-      if os.path.exists(thumb_path):
-        pixmap = QPixmap(thumb_path)
-        label = QLabel(self)
-        label.setPixmap(pixmap)
-        label.setScaledContents(True)
-        label.setFixedSize(128, 128)
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        container_layout.addWidget(label)
+      thumb_widget = ThumbnailWidget(thumb_path)
+      thumb_widget.show_image() # FOR NOW - remove this when we implement lazy loading!
+      self.container_layout.addWidget(thumb_widget)
+      self.thumb_widgets.append(thumb_widget)
 
-    self.thumbnails_container.setLayout(container_layout)
-
+    self.thumbnails_container.setLayout(self.container_layout)
     layout.addWidget(self.thumbnails_container)
     self.setLayout(layout)

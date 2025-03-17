@@ -8,6 +8,9 @@ class GalleryTab(QWidget):
 
     self.layout = QVBoxLayout(self)
 
+    # month widgets, so we can do stuff to them later
+    self.month_widgets = []
+
     # Scroll Area
     self.scroll_area = QScrollArea(self)
     self.scroll_area.setWidgetResizable(True)
@@ -19,15 +22,16 @@ class GalleryTab(QWidget):
   
     db.connect()
     db.cursor.execute("SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month FROM images ORDER BY month DESC;")
-    months = db.cursor.fetchall()
-    for (month,) in months:
+    numeric_month_strings = db.cursor.fetchall()
+    for (numeric_month_string,) in numeric_month_strings:
       db.cursor.execute("""
         SELECT thumbnail_path FROM images
         WHERE strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?
         ORDER BY last_modified ASC
-      """, (month,))
+      """, (numeric_month_string,))
       images = db.cursor.fetchall()
-      month_widget = MonthWidget(month, images)
+      month_widget = MonthWidget(numeric_month_string, images)
+      self.month_widgets.append(month_widget)
       container_layout.addWidget(month_widget)
     db.close()
 
