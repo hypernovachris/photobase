@@ -16,8 +16,16 @@ class ImageScanner:
 
     if not os.path.exists(thumb_path):
       with Image.open(image_path) as img:
-        img.thumbnail((128, 128))
-        img.save(thumb_path)
+        img = img.convert('RGB')
+        # crop the image to square
+        w, h = img.width, img.height
+        if img.width < img.height:
+          cropped = img.crop((0, (h - w)/2, w, h-((h-w)/2)))
+        else:
+          cropped = img.crop(((w-h)/2, 0, w-((w-h)/2), h))
+        # scale and save
+        cropped.thumbnail((128, 128))
+        cropped.save(thumb_path)
     return thumb_path
 
   def scan_and_update_images(self, scan_paths):

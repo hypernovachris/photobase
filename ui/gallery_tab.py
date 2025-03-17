@@ -16,17 +16,20 @@ class GalleryTab(QWidget):
     # Scroll area container
     self.container = QWidget()
     container_layout = QVBoxLayout()
-    
-
-    # for now just get all the images
+  
     db.connect()
-    db.cursor.execute("SELECT thumbnail_path FROM images")
-    images = db.cursor.fetchall()
-    db.close()
-
-    for label in ["March 2025", "October 2024", "September 2024", "June 2024", "May 2024", "January 2024"]:
-      month_widget = MonthWidget(label, images)
+    db.cursor.execute("SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month FROM images ORDER BY month DESC;")
+    months = db.cursor.fetchall()
+    for (month,) in months:
+      db.cursor.execute("""
+        SELECT thumbnail_path FROM images
+        WHERE strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?
+        ORDER BY last_modified ASC
+      """, (month,))
+      images = db.cursor.fetchall()
+      month_widget = MonthWidget(month, images)
       container_layout.addWidget(month_widget)
+    db.close()
 
     container_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 

@@ -4,11 +4,18 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 import os
 
+def numeric_to_text(numeric):
+  year_str, month_num = tuple(numeric.split('-'))
+  months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+  month_str = months[int(month_num) - 1]
+  return month_str + " " + year_str
+
+
 class MonthWidget(QWidget):
-  def __init__(self, text, images):
+  def __init__(self, yearmonth_numeric_str, images):
     super().__init__()
     layout = QVBoxLayout(self)
-    label = QLabel(text)
+    label = QLabel(numeric_to_text(yearmonth_numeric_str))
     label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed) 
     layout.addWidget(label)
     
@@ -16,8 +23,9 @@ class MonthWidget(QWidget):
     container_layout = FlowLayout()
     container_layout.setSpacing(10)
 
-    # add thumbnail images
-    for (thumb_path,) in images:
+    num_images = len(images)
+    for i in range(num_images - 1, -1, -1):
+      (thumb_path,) = images[i]
       if os.path.exists(thumb_path):
         pixmap = QPixmap(thumb_path)
         label = QLabel(self)
