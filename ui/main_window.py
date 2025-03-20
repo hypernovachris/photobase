@@ -17,9 +17,13 @@ class MainWindow(QMainWindow):
     self.setCentralWidget(self.tabs)
 
     # add tabs
-    self.tabs.addTab(GalleryTab(), "Gallery")
+    self.gallery_tab = GalleryTab()
+    self.tabs.addTab(self.gallery_tab, "Gallery")
     self.tabs.addTab(TagsTab(), "Tags")
     self.tabs.addTab(PeopleTab(), "People")
     self.tabs.addTab(PlacesTab(), "Places")
     self.tabs.addTab(SearchTab(), "Search")
     self.tabs.addTab(SettingsTab(), "Settings")
+
+  def cleanup(self):
+    self.gallery_tab.kill_loader_thread()

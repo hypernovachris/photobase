@@ -2,21 +2,15 @@ from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QSizePolicy
 from ui.util.flow_layout import FlowLayout
 from ui.util.thumbnail_widget import ThumbnailWidget
 
-def numeric_to_text(numeric):
-  year_str, month_num = tuple(numeric.split('-'))
-  months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-  month_str = months[int(month_num) - 1]
-  return month_str + " " + year_str
-
-
-class MonthWidget(QWidget):
-  def __init__(self, yearmonth_numeric_str, images=None):
+class ImageGroup(QWidget):
+  def __init__(self, yearmonth_numeric_str, task_queue, images=None):
     super().__init__()
     layout = QVBoxLayout(self)
     # whether or not we are in view
     self.is_in_view = False
+    self.partially_obscured = False
     # The text (e.g. 'March 2025')
-    label = QLabel(numeric_to_text(yearmonth_numeric_str))
+    label = QLabel(yearmonth_numeric_str)
     label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed) 
     layout.addWidget(label)
     
@@ -32,11 +26,22 @@ class MonthWidget(QWidget):
     num_images = len(images)
     for i in range(num_images - 1, -1, -1):
       (thumb_path,) = images[i]
-      thumb_widget = ThumbnailWidget(thumb_path)
-      thumb_widget.show_image() # FOR NOW - remove this when we implement lazy loading!
+      thumb_widget = ThumbnailWidget(thumb_path, task_queue)
+      #thumb_widget.show_image() # FOR NOW - remove this when we implement lazy loading!
       self.container_layout.addWidget(thumb_widget)
       self.thumb_widgets.append(thumb_widget)
 
     self.thumbnails_container.setLayout(self.container_layout)
     layout.addWidget(self.thumbnails_container)
     self.setLayout(layout)
+
+  def update_visibility(self, vp_top, vp_bottom):
+    top = self.mapToGlobal(self.rect().topLeft()).y()
+    bottom = self.mapToGlobal(self.rect().bottomLeft()).y()
+    
+    visibility = bottom >= vp_top and top <= vp_bottom
+    partially_obscured = not (bottom <= vp_bottom and top >= vp_top)
+    if visibility != self.is_in_view or partially_obscured != self.partially_obscured or partially_obscured:
+      self.is_in_view, self.partially_obscured = visibility, partially_obscured
+      for thumb_widget in self.thumb_widgets:
+        thumb_widget.update_visibility(vp_top, vp_bottom)
