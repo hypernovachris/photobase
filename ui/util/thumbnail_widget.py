@@ -1,12 +1,12 @@
 from PyQt6.QtWidgets import QLabel
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
 
 class ThumbnailWidget(QLabel):
-  def __init__(self, thumb_path, task_queue):
-    super().__init__()
+  def __init__(self, parent, thumb_path):
+    super().__init__(parent)
 
     self.thumb_path = thumb_path
-    self.task_queue = task_queue
     self.is_in_view = False
 
     self.setScaledContents(True)
@@ -15,10 +15,11 @@ class ThumbnailWidget(QLabel):
 
   # shouldn't be used since it slows down main thread
   def show_image(self):
-    self.task_queue.put(("load", self))
+    pixmap = QPixmap(self.thumb_path)
+    self.setPixmap(pixmap)
 
   def hide_image(self):
-    self.task_queue.put(("unload", self))
+    self.clear()
 
   def update_visibility(self, vp_top, vp_bottom):
     top = self.mapToGlobal(self.rect().topLeft()).y()

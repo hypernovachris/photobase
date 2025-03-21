@@ -26,5 +26,4 @@ if __name__ == "__main__":
   window = MainWindow()
   window.show()
   splash.finish(window)
-  app.aboutToQuit.connect(window.cleanup)
   app.exec()

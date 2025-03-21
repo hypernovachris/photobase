@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 
 class SearchTab(QWidget):
-  def __init__(self):
-    super().__init__()
-    layout = QVBoxLayout()
-    layout.addWidget(QLabel("Search goes here"))
+  def __init__(self, parent):
+    super().__init__(parent)
+    layout = QVBoxLayout(self)
+    layout.addWidget(QLabel("Search goes here", self))
     self.setLayout(layout)

@@ -3,20 +3,20 @@ from ui.util.flow_layout import FlowLayout
 from ui.util.thumbnail_widget import ThumbnailWidget
 
 class ImageGroup(QWidget):
-  def __init__(self, yearmonth_numeric_str, task_queue, images=None):
-    super().__init__()
+  def __init__(self, parent, caption, images=None):
+    super().__init__(parent)
     layout = QVBoxLayout(self)
     # whether or not we are in view
     self.is_in_view = False
     self.partially_obscured = False
     # The text (e.g. 'March 2025')
-    label = QLabel(yearmonth_numeric_str)
+    label = QLabel(caption, self)
     label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed) 
     layout.addWidget(label)
     
     # Widget to hold thumbnails for all images for this month
-    self.thumbnails_container = QWidget()
-    self.container_layout = FlowLayout()
+    self.thumbnails_container = QWidget(self)
+    self.container_layout = FlowLayout(self.thumbnails_container)
     self.container_layout.setSpacing(10)
     
     # our list of images, so we can show/hide them @ "runtime" (everything is at runtime but you get the idea)
@@ -26,7 +26,7 @@ class ImageGroup(QWidget):
     num_images = len(images)
     for i in range(num_images - 1, -1, -1):
       (thumb_path,) = images[i]
-      thumb_widget = ThumbnailWidget(thumb_path, task_queue)
+      thumb_widget = ThumbnailWidget(self.thumbnails_container, thumb_path)
       #thumb_widget.show_image() # FOR NOW - remove this when we implement lazy loading!
       self.container_layout.addWidget(thumb_widget)
       self.thumb_widgets.append(thumb_widget)
@@ -45,3 +45,5 @@ class ImageGroup(QWidget):
       self.is_in_view, self.partially_obscured = visibility, partially_obscured
       for thumb_widget in self.thumb_widgets:
         thumb_widget.update_visibility(vp_top, vp_bottom)
+
+#TODO: We can skip updating EVERY image by using the fact that only an entire row can become visible at a time!
