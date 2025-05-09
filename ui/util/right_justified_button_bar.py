@@ -2,8 +2,8 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QPushButton, QSpacerItem, QSize
 from PyQt6.QtCore import Qt
 
 class RightJustifiedButtonBar(QFrame):
-  def __init__(self):
-    super().__init__()
+  def __init__(self, parent):
+    super().__init__(parent)
     self.main_layout = QHBoxLayout(self)
     self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
     self.main_layout.setSpacing(0)

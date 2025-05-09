@@ -44,7 +44,7 @@ class GalleryTab(QWidget):
         ORDER BY last_modified ASC
       """, (numeric_month_string,))
       images = db.cursor.fetchall()
-      month_widget = ImageGroup(self, month_numericstr_to_text(numeric_month_string), images)
+      month_widget = ImageGroup(self.container, month_numericstr_to_text(numeric_month_string), images)
       self.month_widgets.append(month_widget)
       container_layout.addWidget(month_widget)
     db.close()

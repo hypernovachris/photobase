@@ -11,23 +11,23 @@ class Setting(QWidget):
     pass
 
 class DirectoryListEditor(Setting):
-  def __init__(self):
-    super().__init__()
+  def __init__(self, parent):
+    super().__init__(parent)
 
     # the layout
-    self.main_layout = QVBoxLayout()
+    self.main_layout = QVBoxLayout(self)
 
     # load in data from the config, keep track so can be saved later
     self.scan_paths = json.loads(config.get("General", "scan_paths", fallback="[]"))
     
 
     # label
-    self.label = QLabel("Add or remove directories Photobase should scan:")
+    self.label = QLabel("Add or remove directories Photobase should scan:", self)
     self.main_layout.addWidget(self.label)
 
     # model/view
-    self.model = QStringListModel()
-    self.view = QListView()
+    self.model = QStringListModel(self)
+    self.view = QListView(self)
     self.model.setStringList(self.scan_paths)
     self.view.setModel(self.model)
     self.view.setEditTriggers(QListView.EditTrigger.NoEditTriggers)
@@ -35,10 +35,10 @@ class DirectoryListEditor(Setting):
     self.main_layout.addWidget(self.view)
 
     # bottom buttons
-    self.button_bar = RightJustifiedButtonBar()
-    self.add_button = self.button_bar.add_button(QPushButton("Add"))
+    self.button_bar = RightJustifiedButtonBar(self)
+    self.add_button = self.button_bar.add_button(QPushButton("Add", self.button_bar))
     self.add_button.clicked.connect(self.add_directory)
-    self.remove_button = self.button_bar.add_button(QPushButton("Remove"))
+    self.remove_button = self.button_bar.add_button(QPushButton("Remove", self.button_bar))
     self.remove_button.clicked.connect(self.remove_directory)
     self.main_layout.addWidget(self.button_bar)
 
@@ -68,13 +68,13 @@ class DirectoryListEditor(Setting):
 
 
 class SettingsPage(QWidget):
-  def __init__(self):
-    super().__init__()
+  def __init__(self, parent):
+    super().__init__(parent)
     self.settings = []
-    self.main_layout = QVBoxLayout()
+    self.main_layout = QVBoxLayout(self)
 
     # adding the settings
-    self.add_setting(DirectoryListEditor())
+    self.add_setting(DirectoryListEditor(self))
 
     self.main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
@@ -100,11 +100,11 @@ class SettingsTab(QWidget):
     self.scroll_area.setWidgetResizable(True)
     self.main_layout.addWidget(self.scroll_area)
 
-    self.settings_page = SettingsPage()
+    self.settings_page = SettingsPage(self)
     self.scroll_area.setWidget(self.settings_page)
 
-    self.button_bar = RightJustifiedButtonBar()
-    self.apply_button = self.button_bar.add_button(QPushButton("Apply Changes"))
+    self.button_bar = RightJustifiedButtonBar(self)
+    self.apply_button = self.button_bar.add_button(QPushButton("Apply Changes", self.button_bar))
     self.apply_button.clicked.connect(self.settings_page.apply_changes)
     #self.button_bar.setFrameShape(QFrame.Shape.Box)
     self.main_layout.addWidget(self.button_bar)
