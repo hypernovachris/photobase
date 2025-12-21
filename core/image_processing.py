@@ -1,7 +1,6 @@
-from PIL import Image
 import hashlib
-import time
 import os
+import time
 from core.database import db
 
 class ImageScanner:
@@ -10,26 +9,15 @@ class ImageScanner:
     self.thumbnails_dir = thumbnails_dir
     os.makedirs(self.thumbnails_dir, exist_ok=True)
 
-  def generate_thumbnail(self, image_path):
-    thumb_hash = hashlib.md5(image_path.encode()).hexdigest()
-    thumb_path = os.path.join(self.thumbnails_dir, f"{thumb_hash}.jpg")
-
-    if not os.path.exists(thumb_path):
-      with Image.open(image_path) as img:
-        img = img.convert('RGB')
-        # crop the image to square
-        w, h = img.width, img.height
-        if img.width < img.height:
-          cropped = img.crop((0, (h - w)/2, w, h-((h-w)/2)))
-        else:
-          cropped = img.crop(((w-h)/2, 0, w-((w-h)/2), h))
-        # scale and save
-        cropped.thumbnail((128, 128))
-        cropped.save(thumb_path)
-    return thumb_path
-
   def scan_and_update_images(self, scan_paths):
-    existing_files = set()
+    existing_file_stats = self.db.get_all_image_paths_and_dates() # {path: last_modified}
+    files_to_update = []
+    found_files = set()
+
+    print("Starting fast scan...")
+    start_time = time.time()
+
+    # 1. Identify files to process
     for scan_path in scan_paths:
       for root, _, files in os.walk(scan_path):
         for file in files:
@@ -38,39 +26,37 @@ class ImageScanner:
           if not self.is_image(file_path):
             continue
 
-          existing_files.add(file_path)
+          found_files.add(file_path)
+          
+          try:
+            mtime = int(os.path.getmtime(file_path))
+            
+            # Check if new or modified
+            if file_path not in existing_file_stats or existing_file_stats[file_path] != mtime:
+                # Calculate expected thumbnail path (hash of file path)
+                thumb_hash = hashlib.md5(file_path.encode()).hexdigest()
+                thumb_path = os.path.join(self.thumbnails_dir, f"{thumb_hash}.jpg")
+                files_to_update.append((file_path, mtime, thumb_path))
+                
+          except OSError:
+             pass 
 
-          last_modified = int(os.path.getmtime(file_path))
-          #thumbnail_path = self.generate_thumbnail(file_path)
+    # 2. Update DB in batches (Processing is just DB inserts now, no image IO)
+    if files_to_update:
+        print(f"Updating database for {len(files_to_update)} files...")
+        batch_count = 0
+        for entry in files_to_update:
+            self.db.add_or_update_image(*entry)
+            batch_count += 1
+            if batch_count >= 1000:
+                self.db.commit()
+                batch_count = 0
+        self.db.commit()
 
-          # check if image exists in DB
-          self.db.cursor.execute("SELECT last_modified FROM images WHERE file_path = ?", (file_path,))
-          existing_entry = self.db.cursor.fetchone()
-
-          if existing_entry:
-            # image exists, check if modified
-            db_last_modified = existing_entry[0]
-            if db_last_modified != last_modified:
-              # first, let's delete the old, outdated thumbnail. query db for old path:
-              self.db.cursor.execute("SELECT thumbnail_path FROM images WHERE file_path = ?", (file_path,))
-              old_thumb_path = self.db.cursor.fetchone()
-              if old_thumb_path:
-                old_thumb_path = old_thumb_path[0]
-                # now remove it.
-                if os.path.exists(old_thumb_path):
-                  # all of these if statements should pass unless something bad has happened.
-                  os.remove(old_thumb_path)
-              # now update the entry
-              thumbnail_path = self.generate_thumbnail(file_path)
-              self.db.delete_image(file_path)
-              self.db.add_or_update_image(file_path, last_modified, thumbnail_path)
-          else:
-            # image DNE, add to DB
-            thumbnail_path = self.generate_thumbnail(file_path)
-            self.db.add_or_update_image(file_path, last_modified, thumbnail_path)
+    # 3. Cleanup missing files
+    self.db.remove_missing_files(found_files)
     
-    # in the following function, we also remove thumbnails for images no longer in the DB
-    self.db.remove_missing_files(existing_files)
+    print(f"Scan completed in {time.time() - start_time:.2f} seconds.")
   
   def is_image(self, file_path):
     valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
