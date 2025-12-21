@@ -1,6 +1,8 @@
-from PyQt6.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtCore import QObject, pyqtProperty, pyqtSignal, pyqtSlot, Qt
+from PyQt6.QtWidgets import QFileDialog, QApplication, QSplashScreen
 from core.config import config
+from core.database import db
+from core.image_processing import ImageScanner
 import json
 
 class SettingsController(QObject):
@@ -33,3 +35,33 @@ class SettingsController(QObject):
     def applyChanges(self):
         config.set("General", "scan_paths", json.dumps(self._scan_paths))
         config.save_config()
+
+        app = QApplication.instance()
+        
+        # Hide main window(s)
+        visible_windows = []
+        for window in app.topLevelWindows():
+            if window.isVisible():
+                visible_windows.append(window)
+                window.hide()
+
+        # Show splash screen
+        splash = QSplashScreen()
+        splash.showMessage("Updating database...", alignment=Qt.AlignmentFlag.AlignCenter)
+        splash.show()
+        app.processEvents()
+
+        # Update database and thumbnails
+        db.connect()
+        scanner = ImageScanner()
+        scanner.scan_and_update_images(self._scan_paths)
+        db.close()
+        
+        # Refresh gallery if available
+        if self.parent() and hasattr(self.parent(), "gallery_model"):
+            self.parent().gallery_model.refresh()
+            
+        # Close splash and restore windows
+        splash.close()
+        for window in visible_windows:
+            window.show()

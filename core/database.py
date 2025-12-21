@@ -51,22 +51,11 @@ class Database:
     return {row[0]: row[1] for row in self.cursor.fetchall()}
 
   def remove_missing_files(self, file_paths):
+    # if no files are provided (found_files is empty), it implies that all files were removed / no files found.
+    # so we should remove all from DB.
     if not file_paths:
-        return
-        
-    # get thumbnail paths for entries we are about to remove
-    # optimize: chunk the query if list is too large (SQLite limit is usually 999 vars)
-    chunk_size = 900
-    file_paths_list = list(file_paths)
-    
-    for i in range(0, len(file_paths_list), chunk_size):
-        chunk = file_paths_list[i:i + chunk_size]
-        placeholders = ",".join("?" for _ in chunk)
-        
-        self.cursor.execute(f"SELECT thumbnail_path FROM images WHERE file_path NOT IN ({placeholders})", tuple(chunk))
+        self.cursor.execute("SELECT thumbnail_path FROM images")
         paths_to_delete = self.cursor.fetchall()
-        
-        # remove them
         for path_to_delete in paths_to_delete:
             old_thumb_path = path_to_delete[0]
             if os.path.exists(old_thumb_path):
@@ -74,9 +63,40 @@ class Database:
                     os.remove(old_thumb_path)
                 except OSError:
                     pass
+        self.cursor.execute("DELETE FROM images")
+        self.connection.commit()
+        return
 
-        # remove entries for files that no longer exist
-        self.cursor.execute(f"DELETE FROM images WHERE file_path NOT IN ({placeholders})", tuple(chunk))
+    # To avoid deleting everything when chunking 'NOT IN', we must first find what to delete.
+    # Get all current file paths from DB.
+    self.cursor.execute("SELECT file_path FROM images")
+    db_paths = set(row[0] for row in self.cursor.fetchall())
+    
+    # Identify orphans
+    paths_to_remove = list(db_paths - set(file_paths))
+    
+    if not paths_to_remove:
+        return
+
+    # Delete orphans in chunks
+    chunk_size = 900
+    for i in range(0, len(paths_to_remove), chunk_size):
+        chunk = paths_to_remove[i:i + chunk_size]
+        placeholders = ",".join("?" for _ in chunk)
+        
+        # Get thumbnails to delete
+        self.cursor.execute(f"SELECT thumbnail_path FROM images WHERE file_path IN ({placeholders})", tuple(chunk))
+        thumbs_to_delete = self.cursor.fetchall()
+        
+        for (thumb_path,) in thumbs_to_delete:
+            if os.path.exists(thumb_path):
+                try:
+                    os.remove(thumb_path)
+                except OSError:
+                    pass
+
+        # Delete database entries
+        self.cursor.execute(f"DELETE FROM images WHERE file_path IN ({placeholders})", tuple(chunk))
     
     self.connection.commit()
 

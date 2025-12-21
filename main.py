@@ -4,6 +4,9 @@ from PyQt6.QtQml import QQmlApplicationEngine
 from PyQt6.QtCore import Qt, QUrl
 from core.database import db
 from core.image_processing import ImageScanner
+import os
+
+os.environ["QT_QUICK_CONTROLS_STYLE"] = "Basic"
 from core.gallery_model import GalleryModel
 from core.settings_controller import SettingsController
 import json
