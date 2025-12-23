@@ -60,17 +60,30 @@ Item {
             
             onContentYChanged: {
                 isScrolling = true
+                if (!scrollCheckTimer.running) {
+                    scrollCheckTimer.start()
+                }
                 scrollStopTimer.restart()
             }
             
             property var selectedPaths: []
             
+            // Periodically check visibility while scrolling
+            Timer {
+                id: scrollCheckTimer
+                interval: 50
+                repeat: true
+                onTriggered: listView.checkVisibility()
+            }
+            
+            // Detect when scrolling stops
             Timer {
                 id: scrollStopTimer
                 interval: 150
                 repeat: false
                 onTriggered: {
                     listView.isScrolling = false
+                    scrollCheckTimer.stop()
                     listView.checkVisibility()
                 }
             }
@@ -152,7 +165,7 @@ Item {
                                 property bool isVisible: false
                                 
                                 function calculateVisibility() {
-                                    if (listView.isScrolling) return
+                                    // if (listView.isScrolling) return // Removed to allow updates during scroll
                                     
                                     var pos = mapToItem(listView, 0, 0)
                                     if (pos.y < listView.height && pos.y + height > 0) {
