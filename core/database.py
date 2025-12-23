@@ -21,6 +21,22 @@ class Database:
         thumbnail_path TEXT
       )
     """)
+    # Tagging support
+    self.cursor.execute("""
+      CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE
+      )
+    """)
+    self.cursor.execute("""
+      CREATE TABLE IF NOT EXISTS image_tags (
+        image_id INTEGER,
+        tag_id INTEGER,
+        PRIMARY KEY (image_id, tag_id),
+        FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      )
+    """)
     self.connection.commit()
   
   def close(self):
@@ -99,5 +115,69 @@ class Database:
         self.cursor.execute(f"DELETE FROM images WHERE file_path IN ({placeholders})", tuple(chunk))
     
     self.connection.commit()
+
+  # --- Tagging System ---
+
+  def get_image_id(self, file_path):
+      self.cursor.execute("SELECT id FROM images WHERE file_path = ?", (file_path,))
+      result = self.cursor.fetchone()
+      return result[0] if result else None
+
+  def get_or_create_tag(self, name):
+      name = name.strip()
+      if not name:
+          return None
+      try:
+          self.cursor.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (name,))
+          self.cursor.execute("SELECT id FROM tags WHERE name = ?", (name,))
+          return self.cursor.fetchone()[0]
+      except sqlite3.Error:
+          return None
+
+  def add_tag_to_image(self, image_id, tag_id):
+      try:
+          self.cursor.execute("INSERT OR IGNORE INTO image_tags (image_id, tag_id) VALUES (?, ?)", (image_id, tag_id))
+          return True
+      except sqlite3.Error:
+          return False
+
+  def remove_tag_from_image(self, image_id, tag_id):
+      self.cursor.execute("DELETE FROM image_tags WHERE image_id = ? AND tag_id = ?", (image_id, tag_id))
+
+  def get_tags_for_image(self, image_id):
+      self.cursor.execute("""
+          SELECT t.id, t.name 
+          FROM tags t
+          JOIN image_tags it ON t.id = it.tag_id
+          WHERE it.image_id = ?
+          ORDER BY t.name
+      """, (image_id,))
+      return self.cursor.fetchall()
+
+  def get_all_tags(self):
+      self.cursor.execute("SELECT id, name FROM tags ORDER BY name")
+      return self.cursor.fetchall()
+
+  def get_common_tags_for_images(self, image_ids):
+      if not image_ids:
+          return []
+      
+      # We need tags that are present for ALL image_ids
+      placeholders = ",".join("?" for _ in image_ids)
+      query = f"""
+          SELECT t.id, t.name
+          FROM tags t
+          JOIN image_tags it ON t.id = it.tag_id
+          WHERE it.image_id IN ({placeholders})
+          GROUP BY t.id, t.name
+          HAVING COUNT(DISTINCT it.image_id) = ?
+          ORDER BY t.name
+      """
+      # Args: list of image IDs + total count of images
+      args = list(image_ids)
+      args.append(len(image_ids))
+      
+      self.cursor.execute(query, tuple(args))
+      return self.cursor.fetchall()
 
 db = Database()

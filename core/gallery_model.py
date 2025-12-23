@@ -23,6 +23,8 @@ class GalleryModel(QAbstractListModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._sections = []
+        self._filter_tag_id = None
+        self._filter_tag_name = None
         self.load_images()
 
     def roleNames(self):
@@ -56,32 +58,72 @@ class GalleryModel(QAbstractListModel):
         self._sections = []
         db.connect()
         
-        # 1. Get Distinct Months
-        db.cursor.execute("SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month FROM images ORDER BY month DESC;")
-        month_rows = db.cursor.fetchall()
-        
-        for (month_str,) in month_rows:
-            # 2. Get Images for Month
+        # Base query parts
+        if self._filter_tag_id is not None:
+             # Filtered query
+             # 1. Get Distinct Months for images with tag
             db.cursor.execute("""
-                SELECT file_path, thumbnail_path 
-                FROM images
-                WHERE strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?
-                ORDER BY last_modified DESC
-            """, (month_str,))
+                SELECT DISTINCT strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) AS month 
+                FROM images i
+                JOIN image_tags it ON i.id = it.image_id
+                WHERE it.tag_id = ?
+                ORDER BY month DESC;
+            """, (self._filter_tag_id,))
+            month_rows = db.cursor.fetchall()
             
-            image_rows = db.cursor.fetchall()
-            image_list = []
-            for (file_path, thumb_path) in image_rows:
-                abs_thumb_path = os.path.abspath(thumb_path)
-                image_list.append({
-                    'path': file_path,
-                    'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
-                })
+            for (month_str,) in month_rows:
+                # 2. Get Images for Month with tag
+                db.cursor.execute("""
+                    SELECT i.file_path, i.thumbnail_path 
+                    FROM images i
+                    JOIN image_tags it ON i.id = it.image_id
+                    WHERE it.tag_id = ? 
+                    AND strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) = ?
+                    ORDER BY i.last_modified DESC
+                """, (self._filter_tag_id, month_str))
                 
-            self._sections.append({
-                'month_text': month_numericstr_to_text(month_str),
-                'images': image_list
-            })
+                image_rows = db.cursor.fetchall()
+                image_list = []
+                for (file_path, thumb_path) in image_rows:
+                    abs_thumb_path = os.path.abspath(thumb_path)
+                    image_list.append({
+                        'path': file_path,
+                        'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
+                    })
+                    
+                self._sections.append({
+                    'month_text': month_numericstr_to_text(month_str),
+                    'images': image_list
+                })
+
+        else:
+            # Original Unfiltered Logic
+            # 1. Get Distinct Months
+            db.cursor.execute("SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month FROM images ORDER BY month DESC;")
+            month_rows = db.cursor.fetchall()
+            
+            for (month_str,) in month_rows:
+                # 2. Get Images for Month
+                db.cursor.execute("""
+                    SELECT file_path, thumbnail_path 
+                    FROM images
+                    WHERE strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?
+                    ORDER BY last_modified DESC
+                """, (month_str,))
+                
+                image_rows = db.cursor.fetchall()
+                image_list = []
+                for (file_path, thumb_path) in image_rows:
+                    abs_thumb_path = os.path.abspath(thumb_path)
+                    image_list.append({
+                        'path': file_path,
+                        'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
+                    })
+                    
+                self._sections.append({
+                    'month_text': month_numericstr_to_text(month_str),
+                    'images': image_list
+                })
             
         db.close()
         self.endResetModel()
@@ -214,3 +256,115 @@ class GalleryModel(QAbstractListModel):
                 collected.append(images[i]['path'])
                 
         return collected
+        return collected
+
+    # --- Tagging Integration ---
+    
+    @pyqtSlot(str, result=bool)
+    def add_new_tag(self, tag_name):
+        db.connect()
+        tag_id = db.get_or_create_tag(tag_name)
+        db.commit() # Ensure it is saved
+        db.close()
+        return tag_id is not None
+
+    @pyqtSlot(str)
+    def apply_tag_to_selection(self, tag_name):
+        if not self._selected_paths:
+            return
+            
+        db.connect()
+        tag_id = db.get_or_create_tag(tag_name)
+        if tag_id:
+            for path in self._selected_paths:
+                img_id = db.get_image_id(path)
+                if img_id:
+                    db.add_tag_to_image(img_id, tag_id)
+            db.commit()
+        db.close()
+
+    @pyqtSlot(str)
+    def remove_tag_from_selection(self, tag_name):
+        if not self._selected_paths:
+            return
+            
+        db.connect()
+        # resolving id from name first
+        # Ideally we should pass IDs but UI might send names.
+        # Let's get ID.
+        # But wait, we don't have get_tag_id_by_name exposed but get_or_create does return ID.
+        # We shouldn't create if we are removing though.
+        # Let's use get_or_create for now or add a helper.
+        # Actually, if we use get_or_create it's fine, if it didn't exist it wouldn't be on the image.
+        tag_id = db.get_or_create_tag(tag_name) 
+        
+        if tag_id:
+            for path in self._selected_paths:
+                img_id = db.get_image_id(path)
+                if img_id:
+                    db.remove_tag_from_image(img_id, tag_id)
+            db.commit()
+        db.close()
+
+    @pyqtSlot(result=list)
+    def get_all_tags_list(self):
+        db.connect()
+        tags = db.get_all_tags() # returns list of (id, name)
+        db.close()
+        return [t[1] for t in tags]
+
+    @pyqtSlot(result=list)
+    def get_common_tags(self):
+        if not self._selected_paths:
+            return []
+            
+        db.connect()
+        # Resolve all paths to IDs
+        img_ids = []
+        for path in self._selected_paths:
+            iid = db.get_image_id(path)
+            if iid:
+                img_ids.append(iid)
+                
+        if not img_ids:
+            db.close()
+            return []
+            
+        common_tags = db.get_common_tags_for_images(img_ids)
+        db.close()
+        return [t[1] for t in common_tags]
+
+    # --- Filtering ---
+    
+    filterChanged = pyqtSignal(str, arguments=['tagName'])
+
+    @pyqtSlot(str)
+    def set_tag_filter(self, tag_name):
+        try:
+            db.connect()
+            # Find ID
+            db.cursor.execute("SELECT id FROM tags WHERE name = ?", (tag_name,))
+            res = db.cursor.fetchone()
+            db.close()
+            
+            if res:
+                self._filter_tag_id = res[0]
+                self._filter_tag_name = tag_name
+                self.load_images()
+                self.filterChanged.emit(tag_name)
+        except Exception as e:
+            print(f"Error setting filter: {e}")
+            if db.connection:
+                db.close()
+    
+    @pyqtSlot()
+    def clear_tag_filter(self):
+        self._filter_tag_id = None
+        self._filter_tag_name = None
+        self.load_images()
+        self.filterChanged.emit("")
+        
+    @pyqtSlot(result=str)
+    def get_active_filter(self):
+        return self._filter_tag_name if self._filter_tag_name else ""
+
