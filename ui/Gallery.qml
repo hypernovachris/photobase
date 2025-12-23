@@ -19,7 +19,7 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             height: 50
-            color: "#e3f2fd" // Light Blue
+            color: theme.isDark ? "#1e3a5f" : "#e3f2fd"
             visible: activeFilter !== ""
             
             RowLayout {
@@ -29,6 +29,7 @@ Item {
                 
                 Label {
                     text: "Filtered by tag: <b>" + activeFilter + "</b>"
+                    color: theme.textColor
                     font.pixelSize: 16
                     Layout.fillWidth: true
                 }
@@ -147,6 +148,7 @@ Item {
                     Label {
                         height: 30 // Part of header height
                         text: monthText
+                        color: theme.textColor
                         font.bold: true
                         font.pixelSize: 20
                         leftPadding: 10
@@ -187,7 +189,7 @@ Item {
                                 
                                 Rectangle {
                                     anchors.fill: parent
-                                    color: "#eeeeee"
+                                    color: theme.buttonColor
                                 }
                                 
                                 Image {
@@ -248,7 +250,7 @@ Item {
                                     Rectangle {
                                         anchors.fill: parent
                                         color: "transparent"
-                                        border.color: "#0078d4" // Windows Blue
+                                        border.color: theme.highlightColor
                                         border.width: 4
                                         visible: listView.selectedPaths.indexOf(modelData.path) !== -1
                                     }

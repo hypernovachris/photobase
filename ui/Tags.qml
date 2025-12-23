@@ -12,6 +12,7 @@ Item {
 
         Label {
             text: "Tags"
+            color: theme.textColor
             font.bold: true
             font.pixelSize: 32
         }
@@ -44,8 +45,8 @@ Item {
                             Rectangle {
                                 width: 140
                                 height: 140
-                                color: "#eee"
-                                border.color: hoverArea.containsMouse ? "#0078d4" : "#ccc"
+                                color: theme.buttonColor
+                                border.color: hoverArea.containsMouse ? theme.highlightColor : theme.borderColor
                                 border.width: hoverArea.containsMouse ? 2 : 1
                                 
                                 Image {
@@ -90,6 +91,7 @@ Item {
                                 
                                 Text {
                                     text: tagData.name
+                                    color: theme.textColor
                                     font.bold: true
                                     font.pixelSize: 16
                                     elide: Text.ElideRight
@@ -100,7 +102,7 @@ Item {
                                 Text {
                                     text: tagData.count + " Photos"
                                     font.pixelSize: 12
-                                    color: "#666"
+                                    color: theme.secondaryTextColor
                                     width: parent.width
                                     horizontalAlignment: Text.AlignHCenter
                                 }

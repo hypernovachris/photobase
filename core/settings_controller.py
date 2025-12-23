@@ -11,6 +11,7 @@ class SettingsController(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._scan_paths = json.loads(config.get("General", "scan_paths", fallback="[]"))
+        self._theme = config.get("General", "theme", fallback="System")
 
     @pyqtProperty(list, notify=scanPathsChanged)
     def scanPaths(self):
@@ -34,6 +35,7 @@ class SettingsController(QObject):
     @pyqtSlot()
     def applyChanges(self):
         config.set("General", "scan_paths", json.dumps(self._scan_paths))
+        config.set("General", "theme", self._theme)
         config.save_config()
 
         app = QApplication.instance()
@@ -65,3 +67,23 @@ class SettingsController(QObject):
         splash.close()
         for window in visible_windows:
             window.show()
+
+    @pyqtProperty(str, notify=scanPathsChanged)
+    def theme(self):
+        return self._theme
+
+    @theme.setter
+    def theme(self, value):
+        if self._theme != value:
+            self._theme = value
+            self.scanPathsChanged.emit()
+
+    @pyqtProperty(bool, notify=scanPathsChanged)
+    def systemDarkMode(self):
+        # build against 6.5+ ideally, but for now simple check or default
+        # If PyQt6 < 6.5, this might not work as expected for system detection without more complex logic.
+        # Fallback to checking QGuiApplication.styleHints
+        from PyQt6.QtGui import QGuiApplication
+        return QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+
+
