@@ -24,7 +24,7 @@ Item {
             
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: 10
+                anchors.margins: 5
                 spacing: 10
                 
                 Label {
@@ -52,6 +52,9 @@ Item {
             flickDeceleration: 10000
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar {}
+            footer: Item {
+                height: 50
+            }
             model: galleryModel
         
             // Scroll State Tracking
