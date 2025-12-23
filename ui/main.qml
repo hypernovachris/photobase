@@ -8,6 +8,15 @@ ApplicationWindow {
     height: 700
     title: "Photobase"
 
+    Connections {
+        target: galleryModel
+        function onFilterChanged(tagName) {
+            if (tagName !== "") {
+                bar.currentIndex = 0
+            }
+        }
+    }
+
     header: TabBar {
         id: bar
         width: parent.width
