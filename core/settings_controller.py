@@ -7,6 +7,7 @@ import json
 
 class SettingsController(QObject):
     scanPathsChanged = pyqtSignal()
+    themeChanged = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -68,7 +69,7 @@ class SettingsController(QObject):
         for window in visible_windows:
             window.show()
 
-    @pyqtProperty(str, notify=scanPathsChanged)
+    @pyqtProperty(str, notify=themeChanged)
     def theme(self):
         return self._theme
 
@@ -76,9 +77,9 @@ class SettingsController(QObject):
     def theme(self, value):
         if self._theme != value:
             self._theme = value
-            self.scanPathsChanged.emit()
+            self.themeChanged.emit()
 
-    @pyqtProperty(bool, notify=scanPathsChanged)
+    @pyqtProperty(bool, notify=themeChanged)
     def systemDarkMode(self):
         # build against 6.5+ ideally, but for now simple check or default
         # If PyQt6 < 6.5, this might not work as expected for system detection without more complex logic.

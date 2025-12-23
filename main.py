@@ -54,6 +54,24 @@ if __name__ == "__main__":
   
   # Load main.qml
   current_dir = os.path.dirname(os.path.abspath(__file__))
+
+  # Instantiate Theme and register as context property
+  from PyQt6.QtQml import QQmlComponent, QQmlEngine
+  theme_component = QQmlComponent(engine, QUrl.fromLocalFile(os.path.join(current_dir, "ui/Theme.qml")))
+  theme_object = theme_component.create()
+  if not theme_object:
+      print("Error creating theme object:", theme_component.errors())
+      sys.exit(-1)
+
+  # Set parent to app and ownership to Cpp to prevent GC by QML engine
+  theme_object.setParent(app)
+  QQmlEngine.setObjectOwnership(theme_object, QQmlEngine.ObjectOwnership.CppOwnership)
+      
+  engine.rootContext().setContextProperty("theme", theme_object)
+  
+  # Keep reference to prevent GC (App parent might be enough, but this doesn't hurt)
+  app.theme_object = theme_object
+
   qml_file = os.path.join(current_dir, "ui/main.qml")
   engine.load(QUrl.fromLocalFile(qml_file))
   

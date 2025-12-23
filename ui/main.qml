@@ -9,11 +9,6 @@ ApplicationWindow {
     title: "Photobase"
     color: theme.backgroundColor
 
-    Theme {
-        id: theme
-    }
-
-
     Connections {
         target: galleryModel
         function onFilterChanged(tagName) {
@@ -40,29 +35,23 @@ ApplicationWindow {
             flickableDirection: Flickable.AutoFlickIfNeeded
         }
 
-        TabButton {
+        StyledTabButton {
             text: "Gallery"
-            palette.buttonText: theme.textColor
         }
-        TabButton {
+        StyledTabButton {
             text: "Tags"
-            palette.buttonText: theme.textColor
         }
-        TabButton {
+        StyledTabButton {
             text: "People"
-            palette.buttonText: theme.textColor
         }
-        TabButton {
+        StyledTabButton {
             text: "Places"
-            palette.buttonText: theme.textColor
         }
-        TabButton {
+        StyledTabButton {
             text: "Search"
-            palette.buttonText: theme.textColor
         }
-        TabButton {
+        StyledTabButton {
             text: "Settings"
-            palette.buttonText: theme.textColor
         }
     }
 
