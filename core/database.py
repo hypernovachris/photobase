@@ -12,7 +12,17 @@ class Database:
     self.cursor = self.connection.cursor()
     self.create_table_if_not_exists()
   
+    self.connection.commit()
+
+  def cleanup_orphan_tags(self):
+    # Only needed if foreign keys were off previously and items were deleted.
+    self.cursor.execute("DELETE FROM image_tags WHERE image_id NOT IN (SELECT id FROM images)")
+    self.connection.commit()
+  
   def create_table_if_not_exists(self):
+    # Enable foreign keys
+    self.cursor.execute("PRAGMA foreign_keys = ON;")
+    
     self.cursor.execute("""
       CREATE TABLE IF NOT EXISTS images (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +48,7 @@ class Database:
       )
     """)
     self.connection.commit()
+    self.cleanup_orphan_tags()
   
   def close(self):
     if self.connection:
@@ -157,6 +168,51 @@ class Database:
   def get_all_tags(self):
       self.cursor.execute("SELECT id, name FROM tags ORDER BY name")
       return self.cursor.fetchall()
+
+  def get_tags_with_metadata(self):
+      # Returns [(name, count, cover_path, cover_thumb_path), ...]
+      # We want the *latest* image for each tag as the cover.
+      # SQLite scalar subqueries or MAX logic.
+      # Since we need path AND thumb_path from the SAME image (the one with MAX last_modified),
+      # we can use a window function or a correlated subquery.
+      
+      # Using correlated subquery for simplicity in SQLite:
+      # SELECT t.name, COUNT(it.image_id),
+      #   (SELECT file_path FROM images i2 JOIN image_tags it2 ON i2.id = it2.image_id WHERE it2.tag_id = t.id ORDER BY i2.last_modified DESC LIMIT 1),
+      #   (SELECT thumbnail_path FROM images i3 JOIN image_tags it3 ON i3.id = it3.image_id WHERE it3.tag_id = t.id ORDER BY i3.last_modified DESC LIMIT 1)
+      # FROM tags t ...
+      
+      # Actually we can do it with one subquery if we select the whole row or just use a CTE.
+      
+      query = """
+        SELECT 
+            t.name, 
+            COUNT(it.image_id) as cnt,
+            (
+                SELECT i.file_path 
+                FROM images i 
+                JOIN image_tags it2 ON i.id = it2.image_id 
+                WHERE it2.tag_id = t.id 
+                ORDER BY i.last_modified DESC 
+                LIMIT 1
+            ) as cover_path,
+            (
+                SELECT i.thumbnail_path 
+                FROM images i 
+                JOIN image_tags it3 ON i.id = it3.image_id 
+                WHERE it3.tag_id = t.id 
+                ORDER BY i.last_modified DESC 
+                LIMIT 1
+            ) as cover_thumb
+        FROM tags t
+        LEFT JOIN image_tags it ON t.id = it.tag_id
+        GROUP BY t.id
+        HAVING cnt > 0
+        ORDER BY t.name
+      """
+      self.cursor.execute(query)
+      return self.cursor.fetchall()
+
 
   def get_common_tags_for_images(self, image_ids):
       if not image_ids:

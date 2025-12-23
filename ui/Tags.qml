@@ -4,95 +4,136 @@ import QtQuick.Layouts
 
 Item {
     id: root
-    
-    // Properties to access main layout if needed, but we use context galleryModel
-    
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20
-        spacing: 10
-        
+        spacing: 20
+
         Label {
-            text: "All Tags"
+            text: "Tags"
             font.bold: true
-            font.pixelSize: 24
+            font.pixelSize: 32
         }
-        
+
         ScrollView {
+            id: scrollView
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            
-            ListView {
-                id: tagsListView
-                model: galleryModel.get_all_tags_list()
-                spacing: 5
+
+            Flow {
+                width: scrollView.availableWidth
+                spacing: 20
+                padding: 10
                 
-                delegate: ItemDelegate {
-                    width: ListView.view.width
-                    height: 50
+                Repeater {
+                    model: tagsModel
                     
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 10
-                        spacing: 10
+                    delegate: Item {
+                        width: 160
+                        height: 200
                         
-                        Label {
-                            text: "🏷️" // Emoji icon
-                            font.pixelSize: 16
+                        property var tagData: modelData
+                        
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            
+                            // Card
+                            Rectangle {
+                                width: 140
+                                height: 140
+                                color: "#eee"
+                                border.color: hoverArea.containsMouse ? "#0078d4" : "#ccc"
+                                border.width: hoverArea.containsMouse ? 2 : 1
+                                
+                                Image {
+                                    anchors.fill: parent
+                                    anchors.margins: 4
+                                    source: tagData.thumbnail || "" 
+                                    fillMode: Image.PreserveAspectCrop
+                                    asynchronous: true
+                                    
+                                    onStatusChanged: {
+                                        if (status === Image.Error && tagData.coverPath) {
+                                            thumbnailGenerator.request_thumbnail(tagData.coverPath)
+                                        }
+                                    }
+                                    
+                                    Connections {
+                                        target: thumbnailGenerator
+                                        function onThumbnailReady(filePath, thumbPath) {
+                                            if (tagData.coverPath === filePath) {
+                                                source = ""
+                                                source = Qt.binding(function() { return Qt.resolvedUrl(thumbPath) })
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                MouseArea {
+                                    id: hoverArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        galleryModel.set_tag_filter(tagData.name)
+                                        // Optional: Switch tab if we could.
+                                    }
+                                }
+                            }
+                            
+                            Column {
+                                width: 140
+                                spacing: 2
+                                
+                                Text {
+                                    text: tagData.name
+                                    font.bold: true
+                                    font.pixelSize: 16
+                                    elide: Text.ElideRight
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                
+                                Text {
+                                    text: tagData.count + " Photos"
+                                    font.pixelSize: 12
+                                    color: "#666"
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                            }
                         }
-                        
-                        Label {
-                            text: modelData
-                            font.pixelSize: 16
-                            Layout.fillWidth: true
-                        }
-                        
-                        Label {
-                            text: "→"
-                            color: "#888"
-                            visible: parent.parent.hovered
-                        }
-                    }
-                    
-                    onClicked: {
-                        galleryModel.set_tag_filter(modelData)
-                        // Switch to Gallery Tab (Index 0)
-                        // Accessing TabBar from here is tricky without id.
-                        // But we know 'bar' is in main.qml. 
-                        // QML scoping: root of file is Item. Parent is StackLayout. Parent of that is ApplicationWindow.
-                        // Let's rely on a global signal or just find it.
-                        // Or just assume user will click Gallery tab.
-                        // Better: auto-switch.
-                        // Using 'bar' id from main.qml context?
-                        // Ids in main.qml are not visible here unless passed.
-                        // HACK: accessing parent.parent... or use a connection
-                        
-                        // Let's assume the user manually switches OR we find a way.
-                        // Since I don't want to break encapsulation too much, I'll try to access 'bar' if it's in scope (it might not be).
-                        // I'll leave it as just setting filter. User can click Gallery.
-                        // WAIT: If I set filter, Gallery updates. If I don't switch, user sees nothing changed.
-                        // Maybe I can find the TabBar.
-                        // parent is StackLayout. parent.parent is ApplicationWindow?
-                        // Let's try:
-                        var win = Window.window
-                         // If 'bar' is a property of window content item?
-                         // In main.qml, 'bar' is a child of ApplicationWindow (header).
-                         // Accessing header items is hard.
-                         // Alternative: Emitting a signal that main.qml listens to? 
-                         // But I can't easily edit main.qml safely (I can but it's another file).
-                         // I WILL edit main.qml to give 'bar' an alias or make it accessible or listen to signal.
-                         // Actually I can just look at `main.qml` again.
                     }
                 }
             }
         }
     }
     
-    // Auto-refresh list when visible
+    // Auto-refresh logic (Needs to re-trigger binding or model update)
+    // Repeater model binding should handle it if 'get_all_tags_model' was a property or signal.
+    // Since it's a function, we need to manually call it.
+    
+    property var tagsModel: []
+    
     onVisibleChanged: {
         if (visible) {
-            tagsListView.model = galleryModel.get_all_tags_list()
+            refreshTags()
         }
     }
+    
+    Connections {
+        target: galleryModel
+        function onTagsChanged() {
+            refreshTags()
+        }
+    }
+    
+    function refreshTags() {
+        tagsModel = galleryModel.get_all_tags_model()
+    }
+    
+    Component.onCompleted: refreshTags()
 }

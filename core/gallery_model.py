@@ -52,6 +52,7 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot()
     def refresh(self):
         self.load_images()
+        self.tagsChanged.emit()
 
     def load_images(self):
         self.beginResetModel()
@@ -260,12 +261,16 @@ class GalleryModel(QAbstractListModel):
 
     # --- Tagging Integration ---
     
+    tagsChanged = pyqtSignal()
+
     @pyqtSlot(str, result=bool)
     def add_new_tag(self, tag_name):
         db.connect()
         tag_id = db.get_or_create_tag(tag_name)
         db.commit() # Ensure it is saved
         db.close()
+        if tag_id:
+            self.tagsChanged.emit()
         return tag_id is not None
 
     @pyqtSlot(str)
@@ -281,6 +286,7 @@ class GalleryModel(QAbstractListModel):
                 if img_id:
                     db.add_tag_to_image(img_id, tag_id)
             db.commit()
+            self.tagsChanged.emit()
         db.close()
 
     @pyqtSlot(str)
@@ -304,6 +310,7 @@ class GalleryModel(QAbstractListModel):
                 if img_id:
                     db.remove_tag_from_image(img_id, tag_id)
             db.commit()
+            self.tagsChanged.emit()
         db.close()
 
     @pyqtSlot(result=list)
@@ -312,6 +319,37 @@ class GalleryModel(QAbstractListModel):
         tags = db.get_all_tags() # returns list of (id, name)
         db.close()
         return [t[1] for t in tags]
+
+    @pyqtSlot(result=list)
+    def get_all_tags_model(self):
+        """Returns a list of dictionaries for QML: name, count, thumbnail"""
+        db.connect()
+        # Returns [(name, count, cover_path, cover_thumb_path), ...]
+        rows = db.get_tags_with_metadata()
+        db.close()
+        
+        result = []
+        for row in rows:
+            name, count, cover_path, cover_thumb_path = row
+            thumb_url = ""
+            
+            # If we have a thumbnail path, verify it exists and convert to QUrl
+            if cover_thumb_path and os.path.exists(cover_thumb_path):
+                thumb_url = QUrl.fromLocalFile(os.path.abspath(cover_thumb_path)).toString()
+            elif cover_path and os.path.exists(cover_path):
+                 # Fallback to full image if thumbnail missing (though main view generaates them)
+                 # Or just leave empty and let UI handle placeholder?
+                 # Assuming if cover_path exists, we might want to trigger generation or show it.
+                 # Let's show it.
+                 thumb_url = QUrl.fromLocalFile(os.path.abspath(cover_path)).toString()
+            
+            result.append({
+                "name": name,
+                "count": count,
+                "thumbnail": thumb_url,
+                "coverPath": cover_path # For triggering generation if needed
+            })
+        return result
 
     @pyqtSlot(result=list)
     def get_common_tags(self):
