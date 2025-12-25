@@ -50,7 +50,7 @@ if __name__ == "__main__":
   app.thumbnailGenerator = ThumbnailGenerator(app)
   engine.rootContext().setContextProperty("thumbnailGenerator", app.thumbnailGenerator)
   
-  print("SettingsController initialized and registered")
+  # print("SettingsController initialized and registered")
   
   # Load main.qml
   current_dir = os.path.dirname(os.path.abspath(__file__))

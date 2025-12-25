@@ -293,10 +293,19 @@ Item {
             }
         }
         MenuItem {
-            text: "Edit Tags"
+            text: listView.selectedPaths.length > 1 ? "Add Tag" : "Edit Tags"
             enabled: listView.selectedPaths.length > 0
             onTriggered: {
+                tagDialog.isAddMode = listView.selectedPaths.length > 1
                 tagDialog.open()
+            }
+        }
+        MenuItem {
+            text: "Remove from '" + activeFilter + "'"
+            visible: activeFilter !== "" && listView.selectedPaths.length > 0
+            height: visible ? implicitHeight : 0
+            onTriggered: {
+                galleryModel.remove_tag_from_selection(activeFilter)
             }
         }
     }
@@ -306,6 +315,8 @@ Item {
         parent: Overlay.overlay
         anchors.centerIn: parent
         width: 300
+
         height: 400
+        property bool isAddMode: false
     }
 }

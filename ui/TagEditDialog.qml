@@ -4,7 +4,8 @@ import QtQuick.Layouts
 
 Dialog {
     id: tagDialog
-    title: "Edit Tags"
+    property bool isAddMode: false
+    title: isAddMode ? "Add Tag" : "Edit Tags"
     modal: true
     standardButtons: Dialog.Ok | Dialog.Cancel
     
@@ -18,7 +19,7 @@ Dialog {
     onOpened: {
         // Load data
         allTags = galleryModel.get_all_tags_list()
-        commonTags = galleryModel.get_common_tags()
+        commonTags = isAddMode ? [] : galleryModel.get_common_tags()
         updateTagsState()
     }
 
@@ -45,7 +46,7 @@ Dialog {
             
             if (isChecked) {
                 galleryModel.apply_tag_to_selection(tag)
-            } else {
+            } else if (!isAddMode) {
                 galleryModel.remove_tag_from_selection(tag)
             }
         }
