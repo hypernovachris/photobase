@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QAbstractListModel, Qt, QVariant, QModelIndex, QUrl, pyqtSlot, pyqtSignal
 from core.database import db
+from core.face_scanner import FaceScanner
 import os
 
 def month_numericstr_to_text(numeric_month_str):
@@ -25,6 +26,13 @@ class GalleryModel(QAbstractListModel):
         self._sections = []
         self._filter_tag_id = None
         self._filter_tag_name = None
+        self._filter_person_id = None
+        self._filter_person_name = None
+        
+        self.face_scanner = FaceScanner()
+        self.face_scanner.signals.progress.connect(self.on_scan_progress)
+        self.face_scanner.signals.finished.connect(self.on_scan_finished)
+
         self.load_images()
 
     def roleNames(self):
@@ -86,6 +94,47 @@ class GalleryModel(QAbstractListModel):
                 image_rows = db.cursor.fetchall()
                 image_list = []
                 for (file_path, thumb_path) in image_rows:
+                    abs_thumb_path = os.path.abspath(thumb_path)
+                    image_list.append({
+                        'path': file_path,
+                        'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
+                    })
+                    
+                self._sections.append({
+                    'month_text': month_numericstr_to_text(month_str),
+                    'images': image_list
+                })
+
+        elif self._filter_person_id is not None:
+             # Filtered by Person
+            db.cursor.execute("""
+                SELECT DISTINCT strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) AS month 
+                FROM images i
+                JOIN faces f ON i.id = f.image_id
+                WHERE f.person_id = ?
+                ORDER BY month DESC;
+            """, (self._filter_person_id,))
+            month_rows = db.cursor.fetchall()
+            
+            for (month_str,) in month_rows:
+                db.cursor.execute("""
+                    SELECT i.file_path, i.thumbnail_path 
+                    FROM images i
+                    JOIN faces f ON i.id = f.image_id
+                    WHERE f.person_id = ? 
+                    AND strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) = ?
+                    ORDER BY i.last_modified DESC
+                """, (self._filter_person_id, month_str))
+                
+                image_rows = db.cursor.fetchall()
+                image_list = []
+                seen_paths = set()
+                
+                for (file_path, thumb_path) in image_rows:
+                    if file_path in seen_paths:
+                        continue
+                    seen_paths.add(file_path)
+                    
                     abs_thumb_path = os.path.abspath(thumb_path)
                     image_list.append({
                         'path': file_path,
@@ -399,10 +448,95 @@ class GalleryModel(QAbstractListModel):
     def clear_tag_filter(self):
         self._filter_tag_id = None
         self._filter_tag_name = None
+        self._filter_person_id = None
+        self._filter_person_name = None
         self.load_images()
         self.filterChanged.emit("")
         
     @pyqtSlot(result=str)
     def get_active_filter(self):
-        return self._filter_tag_name if self._filter_tag_name else ""
+        if self._filter_tag_name:
+            return self._filter_tag_name
+        if self._filter_person_name:
+            return self._filter_person_name
+        return ""
+
+    # --- People & Face Scanner ---
+    
+    scanProgress = pyqtSignal(int, int, arguments=['processed', 'total'])
+    scanFinished = pyqtSignal()
+    peopleChanged = pyqtSignal()
+
+    @pyqtSlot()
+    def start_face_scan(self):
+        self.face_scanner.start_scan()
+
+    def on_scan_progress(self, processed, total):
+        self.scanProgress.emit(processed, total)
+
+    def on_scan_finished(self):
+        self.scanFinished.emit()
+        self.peopleChanged.emit() # Refresh people list
+
+    @pyqtSlot(result=list)
+    def get_people_model(self):
+        db.connect()
+        rows = db.get_all_people_with_counts()
+        db.close()
+        
+        result = []
+        # rows: id, name, count, face_id, file_path, x, y, w, h
+        for row in rows:
+            pid, name, count, fid, file_path, x, y, w, h = row
+            
+            # We want to show a face crop.
+            # QQuickImageProvider is complex to set up dynamically without ID changes.
+            # Best is passing the full image path + crop rect to QML 
+            # and having QML mask it (Qt5) or use Image with sourceClipRect (Qt6.6+?)
+            # Custom Image Provider "image://faces/<face_id>" is best.
+            # BUT for now let's pass data and let UI handle it.
+            # Actually, crop on the fly in QML is possible with `sourceClipRect` in Qt 6.
+            # Or use OpacityMask.
+            # Let's pass the rect.
+            
+            thumb_url = ""
+            if file_path and os.path.exists(file_path):
+                thumb_url = QUrl.fromLocalFile(os.path.abspath(file_path)).toString()
+
+            result.append({
+                "id": pid,
+                "name": name if name else "",
+                "count": count,
+                "imagePath": thumb_url,
+                "faceRect": {"x": x, "y": y, "w": w, "h": h}
+            })
+        return result
+
+    @pyqtSlot(int, str)
+    def rename_person(self, person_id, new_name):
+        new_name = new_name.strip()
+        if not new_name:
+            pass # allow clearing?
+            
+        db.connect()
+        db.update_person_name(person_id, new_name)
+        db.close()
+        self.peopleChanged.emit()
+
+    @pyqtSlot(int)
+    def set_person_filter(self, person_id):
+        self._filter_tag_id = None
+        self._filter_tag_name = None
+        self._filter_person_id = person_id
+        
+        # Find name for display
+        db.connect()
+        p = db.get_person(person_id)
+        db.close()
+        name = p[1] if p and p[1] else "Person"
+        self._filter_person_name = name
+
+        self.load_images()
+        self.filterChanged.emit(name)
+
 

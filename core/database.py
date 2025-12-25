@@ -28,9 +28,16 @@ class Database:
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_path TEXT UNIQUE,
         last_modified INTEGER,
-        thumbnail_path TEXT
+        thumbnail_path TEXT,
+        scanned_for_faces INTEGER DEFAULT 0
       )
     """)
+    # Add column if it doesn't exist (migration for existing DBs)
+    try:
+        self.cursor.execute("ALTER TABLE images ADD COLUMN scanned_for_faces INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass # Column likely already exists
+
     # Tagging support
     self.cursor.execute("""
       CREATE TABLE IF NOT EXISTS tags (
@@ -45,6 +52,29 @@ class Database:
         PRIMARY KEY (image_id, tag_id),
         FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
         FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      )
+    """)
+    
+    # People and Faces
+    self.cursor.execute("""
+      CREATE TABLE IF NOT EXISTS people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT
+      )
+    """)
+    
+    self.cursor.execute("""
+      CREATE TABLE IF NOT EXISTS faces (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        image_id INTEGER,
+        person_id INTEGER,
+        encoding BLOB,
+        x INTEGER,
+        y INTEGER,
+        w INTEGER,
+        h INTEGER,
+        FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
+        FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
       )
     """)
     self.connection.commit()
@@ -234,6 +264,65 @@ class Database:
       args.append(len(image_ids))
       
       self.cursor.execute(query, tuple(args))
+      self.cursor.execute(query, tuple(args))
       return self.cursor.fetchall()
+
+  # --- People & Faces ---
+
+  def get_unscanned_images(self):
+      self.cursor.execute("SELECT id, file_path FROM images WHERE scanned_for_faces = 0")
+      return self.cursor.fetchall()
+
+  def mark_image_scanned(self, image_id):
+      self.cursor.execute("UPDATE images SET scanned_for_faces = 1 WHERE id = ?", (image_id,))
+      # Commit should be handled by caller usually, but for safety in long loops we might commit periodically.
+
+  def create_person(self, name=None):
+      self.cursor.execute("INSERT INTO people (name) VALUES (?)", (name,))
+      return self.cursor.lastrowid
+
+  def get_person(self, person_id):
+      self.cursor.execute("SELECT id, name FROM people WHERE id = ?", (person_id,))
+      return self.cursor.fetchone()
+
+  def add_face(self, image_id, person_id, encoding, rect):
+      x, y, w, h = rect
+      # Ensure encoding is bytes
+      if not isinstance(encoding, bytes):
+          encoding = encoding.tobytes()
+          
+      self.cursor.execute("""
+          INSERT INTO faces (image_id, person_id, encoding, x, y, w, h)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+      """, (image_id, person_id, encoding, x, y, w, h))
+
+  def get_all_people_with_counts(self):
+      # Returns [(id, name, count, face_id, image_path, x, y, w, h), ...]
+      # We need a cover face. Let's pick the first one or one from the latest image.
+      query = """
+        SELECT p.id, p.name, COUNT(f.id) as cnt,
+               (SELECT f2.id FROM faces f2 WHERE f2.person_id = p.id LIMIT 1) as face_id,
+               (SELECT i.file_path FROM faces f3 JOIN images i ON f3.image_id = i.id WHERE f3.person_id = p.id LIMIT 1) as file_path,
+               (SELECT f4.x FROM faces f4 WHERE f4.person_id = p.id LIMIT 1) as fx,
+               (SELECT f4.y FROM faces f4 WHERE f4.person_id = p.id LIMIT 1) as fy,
+               (SELECT f4.w FROM faces f4 WHERE f4.person_id = p.id LIMIT 1) as fw,
+               (SELECT f4.h FROM faces f4 WHERE f4.person_id = p.id LIMIT 1) as fh
+        FROM people p
+        JOIN faces f ON p.id = f.person_id
+        GROUP BY p.id
+        ORDER BY cnt DESC
+      """
+      self.cursor.execute(query)
+      return self.cursor.fetchall()
+
+  def update_person_name(self, person_id, name):
+      self.cursor.execute("UPDATE people SET name = ? WHERE id = ?", (name, person_id))
+
+  def get_all_face_encodings(self):
+      # Helper to get all known faces to matching
+      # Returns [(person_id, encoding), ...]
+      self.cursor.execute("SELECT person_id, encoding FROM faces")
+      return self.cursor.fetchall()
+
 
 db = Database()
