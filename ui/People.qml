@@ -5,24 +5,8 @@ import QtQuick.Layouts
 Item {
     id: root
     
-    // Scan Progress State
-    property int scanProcessed: 0
-    property int scanTotal: 0
-    property bool isScanning: false
-
     Connections {
         target: galleryModel
-        function onScanProgress(processed, total) {
-            isScanning = true
-            scanProcessed = processed
-            scanTotal = total
-        }
-        function onScanFinished() {
-            isScanning = false
-            scanProcessed = 0
-            scanTotal = 0
-            refreshPeople()
-        }
         function onPeopleChanged() {
             refreshPeople()
         }
@@ -45,30 +29,6 @@ Item {
             }
             
             Item { Layout.fillWidth: true }
-            
-            Button {
-                text: root.isScanning ? "Scanning..." : "Scan Faces"
-                enabled: !root.isScanning
-                onClicked: galleryModel.start_face_scan()
-            }
-        }
-        
-        // Progress Bar
-        ColumnLayout {
-            visible: root.isScanning
-            Layout.fillWidth: true
-            spacing: 5
-            
-            ProgressBar {
-                Layout.fillWidth: true
-                from: 0
-                to: root.scanTotal > 0 ? root.scanTotal : 1
-                value: root.scanProcessed
-            }
-            Label {
-                text: "Scanning " + root.scanProcessed + " / " + root.scanTotal
-                color: theme.secondaryTextColor
-            }
         }
 
         ScrollView {

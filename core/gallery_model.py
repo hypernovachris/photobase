@@ -29,8 +29,9 @@ class GalleryModel(QAbstractListModel):
         self._filter_person_id = None
         self._filter_person_name = None
         
+
         self.face_scanner = FaceScanner()
-        self.face_scanner.signals.progress.connect(self.on_scan_progress)
+        # self.face_scanner.signals.progress.connect(self.on_scan_progress)
         self.face_scanner.signals.finished.connect(self.on_scan_finished)
 
         self.load_images()
@@ -463,16 +464,13 @@ class GalleryModel(QAbstractListModel):
 
     # --- People & Face Scanner ---
     
-    scanProgress = pyqtSignal(int, int, arguments=['processed', 'total'])
+    # scanProgress = pyqtSignal(int, int, arguments=['processed', 'total'])
     scanFinished = pyqtSignal()
     peopleChanged = pyqtSignal()
 
     @pyqtSlot()
     def start_face_scan(self):
         self.face_scanner.start_scan()
-
-    def on_scan_progress(self, processed, total):
-        self.scanProgress.emit(processed, total)
 
     def on_scan_finished(self):
         self.scanFinished.emit()

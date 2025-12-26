@@ -269,9 +269,16 @@ class Database:
 
   # --- People & Faces ---
 
-  def get_unscanned_images(self):
-      self.cursor.execute("SELECT id, file_path FROM images WHERE scanned_for_faces = 0")
+  def get_unscanned_images(self, limit=None):
+      if limit:
+          self.cursor.execute("SELECT id, file_path FROM images WHERE scanned_for_faces = 0 LIMIT ?", (limit,))
+      else:
+          self.cursor.execute("SELECT id, file_path FROM images WHERE scanned_for_faces = 0")
       return self.cursor.fetchall()
+
+  def get_unscanned_count(self):
+      self.cursor.execute("SELECT COUNT(*) FROM images WHERE scanned_for_faces = 0")
+      return self.cursor.fetchone()[0]
 
   def mark_image_scanned(self, image_id):
       self.cursor.execute("UPDATE images SET scanned_for_faces = 1 WHERE id = ?", (image_id,))
@@ -295,6 +302,9 @@ class Database:
           INSERT INTO faces (image_id, person_id, encoding, x, y, w, h)
           VALUES (?, ?, ?, ?, ?, ?, ?)
       """, (image_id, person_id, encoding, x, y, w, h))
+
+  def clear_faces_for_image(self, image_id):
+      self.cursor.execute("DELETE FROM faces WHERE image_id = ?", (image_id,))
 
   def get_all_people_with_counts(self):
       # Returns [(id, name, count, face_id, image_path, x, y, w, h), ...]
