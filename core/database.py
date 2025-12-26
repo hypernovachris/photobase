@@ -120,7 +120,8 @@ class Database:
                 try:
                     os.remove(thumb_path)
                 except OSError:
-                    pass
+                  print(f"Failed to remove thumbnail: {thumb_path}")
+                  pass
 
         # Delete database entries
         self.cursor.execute(f"DELETE FROM images WHERE file_path IN ({placeholders})", tuple(chunk))

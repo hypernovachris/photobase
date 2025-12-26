@@ -50,6 +50,7 @@ Item {
                                 border.width: hoverArea.containsMouse ? 2 : 1
                                 
                                 Image {
+                                    id: tagImage
                                     anchors.fill: parent
                                     anchors.margins: 4
                                     source: tagData.thumbnail || "" 
@@ -66,8 +67,8 @@ Item {
                                         target: thumbnailGenerator
                                         function onThumbnailReady(filePath, thumbPath) {
                                             if (tagData.coverPath === filePath) {
-                                                source = ""
-                                                source = Qt.binding(function() { return Qt.resolvedUrl(thumbPath) })
+                                                tagImage.source = ""
+                                                tagImage.source = Qt.binding(function() { return Qt.resolvedUrl(thumbPath) })
                                             }
                                         }
                                     }
