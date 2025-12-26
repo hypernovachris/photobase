@@ -1,5 +1,6 @@
 
 import face_recognition
+from PIL import Image
 import numpy as np
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread, QRunnable, QThreadPool
 from core.database import db
@@ -43,15 +44,51 @@ class FaceScannerWorker(QRunnable):
                      continue
 
                 try:
-                    # Load image
-                    image = face_recognition.load_image_file(file_path)
+                    # Load image with PIL to allow resizing
+                    pil_image = Image.open(file_path)
+
+                    # Ensure RGB
+                    if pil_image.mode != 'RGB':
+                        pil_image = pil_image.convert('RGB')
+
+                    original_w, original_h = pil_image.size
+                    
+                    # # Resize if too large
+                    # max_dim = 1000
+                    # scale = 1.0
+                    
+                    # if max(original_w, original_h) > max_dim:
+                    #     scale = max_dim / max(original_w, original_h)
+                    #     new_w = int(original_w * scale)
+                    #     new_h = int(original_h * scale)
+                    #     pil_image = pil_image.resize((new_w, new_h))
+                    
+                    # image = np.array(pil_image)
+
+                    # Resize if too large
+                    max_mp = 2000000
+                    scale = 1.0
+
+                    if original_w * original_h > max_mp:
+                        scale = math.sqrt(max_mp / (original_w * original_h))
+                        new_w = int(original_w * scale)
+                        new_h = int(original_h * scale)
+                        pil_image = pil_image.resize((new_w, new_h))
+                    
+                    image = np.array(pil_image)
                     
                     # Detect faces
-                    # batch process? No, one by one.
                     face_locations = face_recognition.face_locations(image)
                     face_encodings = face_recognition.face_encodings(image, face_locations)
 
                     for (top, right, bottom, left), encoding in zip(face_locations, face_encodings):
+                        # Scale back coordinates if we resized
+                        if scale != 1.0:
+                            top = int(top / scale)
+                            right = int(right / scale)
+                            bottom = int(bottom / scale)
+                            left = int(left / scale)
+
                         # Match against known
                         matches = face_recognition.compare_faces(known_encodings, encoding, tolerance=0.6)
                         person_id = None
