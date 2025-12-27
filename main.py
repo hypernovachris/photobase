@@ -9,6 +9,7 @@ import os
 os.environ["QT_QUICK_CONTROLS_STYLE"] = "Basic"
 from core.gallery_model import GalleryModel
 from core.settings_controller import SettingsController
+from core.face_scanner import FaceScanner
 import json
 import sys
 import os
@@ -22,7 +23,9 @@ def initialize_app(scan_paths):
 if __name__ == "__main__":
   # update the database if necessary
   scan_paths = json.loads(config.get("General", "scan_paths", fallback="[]"))
-  
+
+  os.makedirs("thumbnails", exist_ok=True)
+
   app = QApplication(sys.argv)
   
   # show a splash screen
@@ -49,6 +52,12 @@ if __name__ == "__main__":
   
   app.thumbnailGenerator = ThumbnailGenerator(app)
   engine.rootContext().setContextProperty("thumbnailGenerator", app.thumbnailGenerator)
+  
+  app.faceScanner = FaceScanner(app)
+  engine.rootContext().setContextProperty("faceScanner", app.faceScanner)
+  app.faceScanner.start_scan()
+  
+  app.aboutToQuit.connect(app.faceScanner.stop_scan)
   
   # print("SettingsController initialized and registered")
   
