@@ -483,29 +483,26 @@ class GalleryModel(QAbstractListModel):
         db.close()
         
         result = []
-        # rows: id, name, count, face_id, file_path, x, y, w, h
+        # rows: id, name, count, face_id, file_path, x, y, w, h, uuid
         for row in rows:
-            pid, name, count, fid, file_path, x, y, w, h = row
+            pid, name, count, fid, file_path, x, y, w, h, person_uuid = row
             
-            # We want to show a face crop.
-            # QQuickImageProvider is complex to set up dynamically without ID changes.
-            # Best is passing the full image path + crop rect to QML 
-            # and having QML mask it (Qt5) or use Image with sourceClipRect (Qt6.6+?)
-            # Custom Image Provider "image://faces/<face_id>" is best.
-            # BUT for now let's pass data and let UI handle it.
-            # Actually, crop on the fly in QML is possible with `sourceClipRect` in Qt 6.
-            # Or use OpacityMask.
-            # Let's pass the rect.
-            
-            thumb_url = ""
+            image_url = ""
             if file_path and os.path.exists(file_path):
-                thumb_url = QUrl.fromLocalFile(os.path.abspath(file_path)).toString()
+                image_url = QUrl.fromLocalFile(os.path.abspath(file_path)).toString()
+
+            face_thumb_url = ""
+            if person_uuid:
+                thumb_path = os.path.abspath(os.path.join("thumbnails", "faces", f"{person_uuid}.jpg"))
+                if os.path.exists(thumb_path):
+                    face_thumb_url = QUrl.fromLocalFile(thumb_path).toString()
 
             result.append({
                 "id": pid,
                 "name": name if name else "",
                 "count": count,
-                "imagePath": thumb_url,
+                "imagePath": image_url,
+                "faceThumbnail": face_thumb_url,
                 "faceRect": {"x": x, "y": y, "w": w, "h": h}
             })
         return result

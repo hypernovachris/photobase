@@ -1,7 +1,52 @@
 import hashlib
 import os
 import time
+from PIL import Image
 from core.database import db
+
+def create_square_thumbnail(image, save_path, size=(128, 128)):
+    """
+    Creates a square thumbnail from a PIL Image object and saves it to save_path.
+    
+    Args:
+        image (PIL.Image): The source image.
+        save_path (str): The path to save the thumbnail to.
+        size (tuple): The target size (width, height). Default (128, 128).
+    """
+    thumb = create_square_thumbnail_from_pil(image, size)
+    
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    thumb.save(save_path, "JPEG")
+
+
+def create_square_thumbnail_from_pil(image, size=(128, 128)):
+    """
+    Creates a square thumbnail from a PIL Image object.
+    
+    Args:
+        image (PIL.Image): The source image.
+        size (tuple): The target size (width, height). Default (128, 128).
+    
+    Returns:
+        PIL.Image: The thumbnail image.
+    """
+    img = image.copy()
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+        
+    # Crop to square
+    w, h = img.width, img.height
+    if w < h:
+        img = img.crop((0, (h - w)/2, w, h-((h-w)/2)))
+    else:
+        img = img.crop(((w-h)/2, 0, w-((w-h)/2), h))
+        
+    # Scale
+    img.thumbnail(size)
+    
+    return img
+
 
 class ImageScanner:
   def __init__(self, thumbnails_dir="thumbnails"):

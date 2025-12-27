@@ -23,7 +23,9 @@ def initialize_app(scan_paths):
 if __name__ == "__main__":
   # update the database if necessary
   scan_paths = json.loads(config.get("General", "scan_paths", fallback="[]"))
-  
+
+  os.makedirs("thumbnails", exist_ok=True)
+
   app = QApplication(sys.argv)
   
   # show a splash screen

@@ -66,10 +66,14 @@ Item {
                                 Image {
                                     anchors.fill: parent
                                     anchors.margins: 4
-                                    source: person.imagePath
+                                    // If we have a thumbnail dedicated to the face, use it!
+                                    // Otherwise fallback to full image + clipping
+                                    source: person.faceThumbnail ? person.faceThumbnail : person.imagePath
                                     
                                     // Face Crop
-                                    sourceClipRect: Qt.rect(person.faceRect.x, person.faceRect.y, person.faceRect.w, person.faceRect.h)
+                                    // If using thumbnail, we don't need to clip (or maybe just a little? but thumbnail is already cropped)
+                                    // If using full image, we clip.
+                                    sourceClipRect: person.faceThumbnail ? undefined : Qt.rect(person.faceRect.x, person.faceRect.y, person.faceRect.w, person.faceRect.h)
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true
                                 }
