@@ -14,22 +14,8 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 20
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 20
-
-            Label {
-                text: "People"
-                color: theme.textColor
-                font.bold: true
-                font.pixelSize: 32
-            }
-            
-            Item { Layout.fillWidth: true }
-        }
+        // anchors.margins: 20
+        // spacing: 20
 
         ScrollView {
             id: scrollView
@@ -37,83 +23,97 @@ Item {
             Layout.fillHeight: true
             clip: true
 
-            Flow {
-                width: scrollView.availableWidth
+            Column {
+                x: 20
+                y: 20
+                width: scrollView.availableWidth - 40
                 spacing: 20
-                padding: 10
+
+                Label {
+                    text: "People"
+                    color: theme.textColor
+                    font.bold: true
+                    font.pixelSize: 32
+                }
+
+                Flow {
+                    width: parent.width
+                    spacing: 20
+                    padding: 10
                 
-                Repeater {
-                    model: peopleModel
-                    
-                    delegate: Item {
-                        width: 160
-                        height: 240 // Taller for inputs
+                    Repeater {
+                        model: peopleModel
                         
-                        property var person: modelData
-                        
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 8
+                        delegate: Item {
+                            width: 160
+                            height: 240 // Taller for inputs
                             
-                            // Face Card
-                            Rectangle {
-                                width: 140
-                                height: 140
-                                color: theme.buttonColor
-                                border.color: hoverArea.containsMouse ? theme.highlightColor : theme.borderColor
-                                border.width: hoverArea.containsMouse ? 2 : 1
+                            property var person: modelData
+                            
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 8
                                 
-                                Image {
-                                    anchors.fill: parent
-                                    anchors.margins: 4
-                                    // If we have a thumbnail dedicated to the face, use it!
-                                    // Otherwise fallback to full image + clipping
-                                    source: person.faceThumbnail ? person.faceThumbnail : person.imagePath
+                                // Face Card
+                                Rectangle {
+                                    width: 140
+                                    height: 140
+                                    color: theme.buttonColor
+                                    border.color: hoverArea.containsMouse ? theme.highlightColor : theme.borderColor
+                                    border.width: hoverArea.containsMouse ? 2 : 1
                                     
-                                    // Face Crop
-                                    // If using thumbnail, we don't need to clip (or maybe just a little? but thumbnail is already cropped)
-                                    // If using full image, we clip.
-                                    sourceClipRect: person.faceThumbnail ? undefined : Qt.rect(person.faceRect.x, person.faceRect.y, person.faceRect.w, person.faceRect.h)
-                                    fillMode: Image.PreserveAspectCrop
-                                    asynchronous: true
-                                }
-                                
-                                MouseArea {
-                                    id: hoverArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        galleryModel.set_person_filter(person.id)
+                                    Image {
+                                        anchors.fill: parent
+                                        anchors.margins: 4
+                                        // If we have a thumbnail dedicated to the face, use it!
+                                        // Otherwise fallback to full image + clipping
+                                        source: person.faceThumbnail ? person.faceThumbnail : person.imagePath
+                                        
+                                        // Face Crop
+                                        // If using thumbnail, we don't need to clip (or maybe just a little? but thumbnail is already cropped)
+                                        // If using full image, we clip.
+                                        sourceClipRect: person.faceThumbnail ? undefined : Qt.rect(person.faceRect.x, person.faceRect.y, person.faceRect.w, person.faceRect.h)
+                                        fillMode: Image.PreserveAspectCrop
+                                        asynchronous: true
+                                    }
+                                    
+                                    MouseArea {
+                                        id: hoverArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            galleryModel.set_person_filter(person.id)
+                                        }
                                     }
                                 }
-                            }
-                            
-                            // Name Input
-                            TextField {
-                                width: 140
-                                text: person.name
-                                placeholderText: "Name this person..."
-                                color: theme.textColor
-                                background: Rectangle { color: "transparent" }
-                                horizontalAlignment: TextInput.AlignHCenter
-                                font.bold: true
-                                font.pixelSize: 14
                                 
-                                onEditingFinished: {
-                                    if (text !== person.name) {
-                                        galleryModel.rename_person(person.id, text)
+                                // Name Input
+                                TextField {
+                                    width: 140
+                                    text: person.name
+                                    placeholderText: "Name this person..."
+                                    color: theme.textColor
+                                    background: Rectangle { color: "transparent" }
+                                    horizontalAlignment: TextInput.AlignHCenter
+                                    font.bold: true
+                                    font.pixelSize: 14
+                                    
+                                    onEditingFinished: {
+                                        if (text !== person.name) {
+                                            galleryModel.rename_person(person.id, text)
+                                        }
+                                        focus = false
                                     }
-                                    focus = false
                                 }
-                            }
-                            
-                            Text {
-                                text: person.count + " Photos"
-                                font.pixelSize: 12
-                                color: theme.secondaryTextColor
-                                width: parent.width
-                                horizontalAlignment: Text.AlignHCenter
+                                
+                                Text {
+                                    text: person.count + " Photos"
+                                    font.pixelSize: 12
+                                    color: theme.secondaryTextColor
+                                    width: parent.width
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
                             }
                         }
                     }

@@ -1,10 +1,42 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 Item {
-    Label {
-        text: "Search View"
-        color: theme.textColor
-        anchors.centerIn: parent
+    ColumnLayout {
+        anchors.fill: parent
+        // anchors.margins: 20
+        // spacing: 20
+
+        ScrollView {
+            id: scrollView
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            clip: true
+            
+            ColumnLayout {
+                x: 20
+                y: 20
+                width: scrollView.availableWidth - 40
+                spacing: 20
+
+                Label {
+                    text: "Search"
+                    color: theme.textColor
+                    font.bold: true
+                    font.pixelSize: 32
+                }
+
+                Label {
+                    text: "Search View"
+                    color: theme.textColor
+                    Layout.alignment: Qt.AlignCenter
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+        }
     }
 }

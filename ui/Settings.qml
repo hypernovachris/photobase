@@ -5,18 +5,27 @@ import QtQuick.Layouts
 Item {
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 20
-
+        // anchors.margins: 20
+        // spacing: 20
         // Main Scrollable Content
         ScrollView {
+            id: scrollView
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
 
             ColumnLayout {
-                width: parent.width
+                x: 20
+                y: 20
+                width: scrollView.availableWidth - 40
                 spacing: 20
+
+                Label {
+                    text: "Settings"
+                    color: theme.textColor
+                    font.bold: true
+                    font.pixelSize: 32
+                }
 
                 // Appearance Section
                 ColumnLayout {
@@ -148,22 +157,15 @@ Item {
                                         }
                                     }
                                 }
+                                Button {
+                                    text: "Apply Changes"
+                                    onClicked: settingsController.applyChanges()
+                                    font.bold: true
+                                }
                             }
                         }
                     }
                 }
-            }
-        }
-
-        // Footer Action
-        RowLayout {
-            Layout.alignment: Qt.AlignRight
-            
-            Button {
-                text: "Apply Changes"
-                onClicked: settingsController.applyChanges()
-                // Highlight explicit action?
-                font.bold: true
             }
         }
     }

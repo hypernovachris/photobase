@@ -13,46 +13,66 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: 0
-        
-        // Filter Banner
-        Rectangle {
-            Layout.fillWidth: true
-            height: 50
-            color: theme.isDark ? "#1e3a5f" : "#e3f2fd"
-            visible: activeFilter !== ""
-            
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 5
-                spacing: 10
-                
-                Label {
-                    text: "Filtered by tag: <b>" + activeFilter + "</b>"
-                    color: theme.textColor
-                    font.pixelSize: 16
-                    Layout.fillWidth: true
-                }
-                
-                Button {
-                    text: "Clear Filter"
-                    onClicked: galleryModel.clear_tag_filter()
-                }
-            }
-        }
+        // anchors.margins: 20
+        // spacing: 20 removed
 
+
+        
+        // ListView with Header
         ListView {
             id: listView
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 20
             clip: true
-            interactive: false
+            interactive: true 
             cacheBuffer: 1000
             reuseItems: true
             flickDeceleration: 10000
             boundsBehavior: Flickable.StopAtBounds
             ScrollBar.vertical: ScrollBar {}
+            
+            header: Column {
+                width: listView.width
+                spacing: 20
+                padding: 20
+
+                
+                Label {
+                    text: "Gallery"
+                    color: theme.textColor
+                    font.bold: true
+                    font.pixelSize: 32
+                }
+                
+                // Filter Banner
+                Rectangle {
+                    width: parent.width - 40 // Account for padding
+                    height: 50
+                    color: theme.isDark ? "#1e3a5f" : "#e3f2fd"
+                    visible: activeFilter !== ""
+                    
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 5
+                        spacing: 10
+                        
+                        Label {
+                            text: "Filtered by tag: <b>" + activeFilter + "</b>"
+                            color: theme.textColor
+                            font.pixelSize: 16
+                            Layout.fillWidth: true
+                        }
+                        
+                        Button {
+                            text: "Clear Filter"
+                            onClicked: galleryModel.clear_tag_filter()
+                        }
+                    }
+                }
+                
+                
+            }
             footer: Item {
                 height: 50
             }
