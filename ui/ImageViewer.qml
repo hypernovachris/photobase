@@ -66,6 +66,12 @@ Rectangle {
         root.visible = true
         root.forceActiveFocus() // Ensure focus for keyboard
         root.resetControlsTimer()
+        // Reset zoom
+        if (mainImage) {
+            mainImage.scale = 1.0
+            mainImage.x = 0
+            mainImage.y = 0
+        }
     }
     
     function close() {
@@ -83,13 +89,140 @@ Rectangle {
             Layout.fillWidth: true
             color: "black"
             
-            Image {
-                id: mainImage
+            Item {
+                id: imageContainer
                 anchors.fill: parent
-                source: root.currentImagePath ? "file:///" + root.currentImagePath : ""
-                fillMode: Image.PreserveAspectFit
-                asynchronous: true
-                autoTransform: true // Respect EXIF orientation
+                clip: true
+
+                Image {
+                    id: mainImage
+                    width: parent.width
+                    height: parent.height
+                    source: root.currentImagePath ? "file:///" + root.currentImagePath : ""
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    autoTransform: true 
+                    transformOrigin: Item.TopLeft
+                }
+                
+                MouseArea {
+                    id: imageMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    
+                    property point lastMousePos
+                    property bool isDragging: false
+
+                    onWheel: (wheel) => {
+                        var zoomFactor = 1.1
+                        var oldScale = mainImage.scale
+                        var newScale = oldScale
+                        
+                        if (wheel.angleDelta.y > 0) {
+                            newScale *= zoomFactor
+                        } else {
+                            newScale /= zoomFactor
+                        }
+                        
+                        // Limit minimum scale to 1.0
+                        if (newScale < 1.0) newScale = 1.0
+
+                        // Limit maximum scale to 100.0
+                        if (newScale > 100.0) newScale = 100.0
+                        
+                        // Calculate new position to zoom towards mouse
+                        var mouseX = wheel.x
+                        var mouseY = wheel.y
+                        
+                        var xInImage = (mouseX - mainImage.x) / oldScale
+                        var yInImage = (mouseY - mainImage.y) / oldScale
+                        
+                        var newX = mouseX - xInImage * newScale
+                        var newY = mouseY - yInImage * newScale
+                        
+                        // Apply changes
+                        mainImage.scale = newScale
+                        mainImage.x = newX
+                        mainImage.y = newY
+                        
+                        // Re-clamp if we hit 1.0 to re-center (optional logic, but keeps it clean)
+                        if (mainImage.scale <= 1.001) {
+                            mainImage.scale = 1.0
+                            mainImage.x = 0
+                            mainImage.y = 0
+                        }
+
+                        // Prevent default scrolling
+                        wheel.accepted = true
+                    }
+                    
+                    onPressed: (mouse) => {
+                        if (mainImage.scale > 1.0 && mouse.button === Qt.LeftButton) {
+                            lastMousePos = Qt.point(mouse.x, mouse.y)
+                            isDragging = true
+                        }
+                        root.resetControlsTimer()
+                    }
+                    
+                    onReleased: {
+                        isDragging = false
+                    }
+                    
+                    onPositionChanged: (mouse) => {
+                        root.resetControlsTimer()
+                        if (isDragging && mainImage.scale > 1.0) {
+                            var dx = mouse.x - lastMousePos.x
+                            var dy = mouse.y - lastMousePos.y
+                            
+                            mainImage.x += dx
+                            mainImage.y += dy
+                            
+                            lastMousePos = Qt.point(mouse.x, mouse.y)
+                        }
+                    }
+                }
+            }
+
+            // Reset Zoom Button
+            Item {
+                width: 32
+                height: 32
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.topMargin: 20
+                visible: mainImage.scale > 1.0
+                
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 10
+                    color: "#80000000"
+                    
+                    Image {
+                        id: resetIcon
+                        source: "file:assets/icons/scan.svg"
+                        anchors.centerIn: parent
+                        visible: false
+                    }
+                    
+                    MultiEffect {
+                        anchors.margins: 6
+                        source: resetIcon
+                        anchors.fill: parent
+                        colorization: 1.0
+                        colorizationColor: "white"
+                    }
+                }
+                
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        mainImage.scale = 1.0
+                        mainImage.x = 0
+                        mainImage.y = 0
+                    }
+                }
             }
             
             // Left Arrow
@@ -119,6 +252,7 @@ Rectangle {
                         anchors.fill: parent
                         colorization: 1.0
                         colorizationColor: "white"
+                        anchors.margins: 6
                     }
                 }
                 
@@ -158,6 +292,7 @@ Rectangle {
                         anchors.fill: parent
                         colorization: 1.0
                         colorizationColor: "white"
+                        anchors.margins: 6
                     }
                 }
                 
@@ -346,15 +481,15 @@ Rectangle {
                                 
                                 // Add Tag Button
                                 Item {
-                                    width: 24
-                                    height: 24
+                                    width: 20
+                                    height: 20
                                     // anchors.verticalCenter: parent.verticalCenter -- Invalid in Flow
 
                                     Image {
                                         id: addIcon
                                         source: "file:assets/icons/plus.svg" 
-                                        sourceSize.width: 24
-                                        sourceSize.height: 24
+                                        sourceSize.width: 20
+                                        sourceSize.height: 20
                                         visible: false
                                     }
 
