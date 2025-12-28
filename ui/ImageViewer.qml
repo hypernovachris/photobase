@@ -483,8 +483,10 @@ Rectangle {
                             }
                             Text {
                                 text: root.currentImageDetails ? root.currentImageDetails.exifString : "Unavailable"
+                                font.italic: (text === "Unavailable")
                                 font.pixelSize: 14
                                 color: theme.textColor
+                                opacity: (text === "Unavailable") ? 0.7 : 1.0
                             }
                         }
                         
@@ -516,16 +518,6 @@ Rectangle {
                                         colorizationColor: theme.textColor
                                     }
                                 }
-                            }
-
-                            // None Label
-                            Text {
-                                height: parent.rowHeight
-                                text: "(None)"
-                                font.pixelSize: 14
-                                color: theme.textColor
-                                visible: root.currentImageDetails ? root.currentImageDetails.tags.length === 0 : true
-                                verticalAlignment: Text.AlignVCenter
                             }
 
                             // Tags
@@ -649,10 +641,11 @@ Rectangle {
                                 }
                             }
                             Text {
-                                text: "No location data"
+                                text: "Unavailable"
                                 font.italic: true
                                 color: theme.textColor
                                 opacity: 0.7
+                                font.pixelSize: 14
                             }
                         }
                         
@@ -700,6 +693,7 @@ Rectangle {
                                         text: (root.peopleList ? root.peopleList.length : "None") + " detected"
                                         color: theme.textColor
                                         verticalAlignment: Text.AlignVCenter
+                                        font.pixelSize: 14
                                     }
 
                                     // Link icon

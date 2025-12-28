@@ -45,10 +45,29 @@ Item {
                             color: theme.textColor
                         }
                         ComboBox {
+                            id: control
                             model: ["System", "Normal", "Dark"]
                             currentIndex: model.indexOf(settingsController.theme)
                             onActivated: (index) => {
                                 settingsController.theme = model[index]
+                            }
+
+                            indicator: Item {
+                                x: control.width - width - 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 20
+                                height: 20
+                                Image {
+                                    id: arrowIcon
+                                    source: "file:assets/icons/chevron-down.svg"
+                                    visible: false
+                                }
+                                MultiEffect {
+                                    source: arrowIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.buttonTextColor
+                                }
                             }
                             
                             delegate: ItemDelegate {
@@ -68,7 +87,9 @@ Item {
                             
                             contentItem: Text {
                                 leftPadding: 10
-                                rightPadding: 10
+                                rightPadding: control.indicator.width + control.spacing + 10
+                                topPadding: 10
+                                bottomPadding: 10
                                 text: parent.displayText
                                 color: theme.textColor
                                 verticalAlignment: Text.AlignVCenter
@@ -86,12 +107,17 @@ Item {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 10
-                    
+
                     Label {
-                        text: "Add or remove directories Photobase should scan:"
+                        text: "Gallery"
                         font.bold: true
                         color: theme.textColor
                         font.pixelSize: 18
+                    }
+                    
+                    Label {
+                        text: "Add or remove directories Photobase should scan:"
+                        color: theme.textColor
                     }
                     
                     // Container for List + Buttons
@@ -221,56 +247,67 @@ Item {
                     }
                 }
 
-                Item {
-                    implicitWidth: aboutRow.implicitWidth
-                    implicitHeight: aboutRow.implicitHeight
+                // About Section
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
                     
-                    Layout.fillWidth: false 
-
-                    // 2. The Layout handles the horizontal positioning
-                    RowLayout {
-                        id: aboutRow
-                        anchors.fill: parent
-                        spacing: 10
-                        
-                        Text {
-                            text: "About Photobase"
-                            color: theme.textColor
-                            verticalAlignment: Text.AlignVCenter
-                        }
-
-                        // Link icon
-                        Item {
-                            width: 16
-                            height: 16
-                            Layout.alignment: Qt.AlignVCenter
-
-                            Image {
-                                id: linkIcon
-                                source: "file:assets/icons/external-link-3px.svg"
-                                sourceSize: Qt.size(16, 16)
-                                visible: false
-                            }
-
-                            MultiEffect {
-                                source: linkIcon
-                                anchors.fill: parent
-                                colorization: 1.0
-                                colorizationColor: theme.textColor
-                            }
-                        }
+                    Label {
+                        text: "About"
+                        font.bold: true
+                        color: theme.textColor
+                        font.pixelSize: 18
                     }
+                    Item {
+                        implicitWidth: aboutRow.implicitWidth
+                        implicitHeight: aboutRow.implicitHeight
+                        
+                        Layout.fillWidth: false 
 
-                    // 3. The MouseArea fills the entire Item (Text + Icon)
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            aboutDialog.open()
+                        // 2. The Layout handles the horizontal positioning
+                        RowLayout {
+                            id: aboutRow
+                            anchors.fill: parent
+                            spacing: 10
+                            
+                            Text {
+                                text: "About Photobase"
+                                color: theme.textColor
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            // Link icon
+                            Item {
+                                width: 16
+                                height: 16
+                                Layout.alignment: Qt.AlignVCenter
+
+                                Image {
+                                    id: linkIcon
+                                    source: "file:assets/icons/external-link-3px.svg"
+                                    sourceSize: Qt.size(16, 16)
+                                    visible: false
+                                }
+
+                                MultiEffect {
+                                    source: linkIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.textColor
+                                }
+                            }
+                        }
+
+                        // 3. The MouseArea fills the entire Item (Text + Icon)
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                aboutDialog.open()
+                            }
                         }
                     }
                 }
-
             }
         }
     }
