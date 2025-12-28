@@ -8,7 +8,7 @@ import hashlib
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread, QRunnable, QThreadPool, QTimer, pyqtProperty
 from core.database import Database
 import os
-from core.image_processing import create_square_thumbnail_from_pil
+from core.image_processing import create_square_thumbnail
 
 thumbnails_dir = "thumbnails"
 
@@ -71,23 +71,19 @@ class FaceScannerWorker(QObject):
                             break
                         time.sleep(0.1)
                     continue
-
-                # Load known faces to memory for this batch (re-fetch to keep up to date)
-                # Optimization: Could cache this if not changing often, but for now safe to fetch
-                try:
-                    known_faces = self.db.get_all_face_encodings()
-                    known_encodings = [np.frombuffer(enc, dtype=np.float64) for _, enc in known_faces]
-                    known_ids = [pid for pid, _ in known_faces]
-                except Exception as e:
-                    print(f"Worker {self.worker_id} Error fetching faces: {e}")
-                    # Release claimed? No API for that yet. Just mark scanned?
-                    # If we fail here, we should probably mark them back to 0 or something.
-                    # But for now let's just loop. They stay -1 until restart.
-                    continue
-
+                
                 processed_in_batch = 0
                 
                 for image_id, file_path in unscanned:
+
+                    try:
+                        known_faces = self.db.get_all_face_encodings()
+                        known_encodings = [np.frombuffer(enc, dtype=np.float64) for _, enc in known_faces]
+                        known_ids = [pid for pid, _ in known_faces]
+                    except Exception as e:
+                        print(f"Worker {self.worker_id} Error fetching faces: {e}")
+                        continue
+                    
                     if not self.is_running:
                         # We claimed them but stopping. They stay -1.
                         # `reset_stuck_scans` on next startup fixes this.
@@ -117,7 +113,7 @@ class FaceScannerWorker(QObject):
                         original_w, original_h = pil_original.size
                         
                         # 2. Prepare detection image (resized if needed)
-                        max_pixels = 2000000 
+                        max_pixels = 2000000 # 2MP
                         detection_scale = 1.0
                         image_for_detection = image_original_np
 
@@ -153,7 +149,10 @@ class FaceScannerWorker(QObject):
                         else:
                             face_locations = face_locations_small
 
-                        print(f"Worker {self.worker_id}: Found {len(face_locations)} faces in {file_path}")
+                        # Remove faces that are too small
+                        face_locations = [face for face in face_locations if face[2] - face[0] > 150]
+
+                        #print(f"Worker {self.worker_id}: Found {len(face_locations)} faces in {file_path}")
 
                         # 5. Use ORIGINAL image for encoding and landmarks (Accuracy)
                         # print(f"Worker {self.worker_id} Encoding faces in {file_path} ({image_original_np.shape})...")
@@ -169,29 +168,27 @@ class FaceScannerWorker(QObject):
                             # Use helper
                             score = score_face_thumbnail(landmarks)
 
-                            # Match against known
-                            matches = face_recognition.compare_faces(known_encodings, encoding, tolerance=0.6)
-                            person_id = None
-                            
-                            if True in matches:
-                                first_match_index = matches.index(True)
-                                person_id = known_ids[first_match_index]
+                            # If no known encodings, create a new person
+                            if len(known_encodings) == 0:
+                                person_id = self.db.create_person()
+                                known_encodings.append(encoding)
+                                known_ids.append(person_id)
                             else:
-                                if len(known_encodings) == 0:
-                                    person_id = self.db.create_person()
-                                    known_encodings.append(encoding)
-                                    known_ids.append(person_id)
+                                # Get the distance to every other face
+                                distances = face_recognition.face_distance(known_encodings, encoding)
+                                # Find the closest match
+                                closest_match_index = distances.argmin()
+                                # Check if it's the same person
+                                is_same_person = face_recognition.compare_faces([known_encodings[closest_match_index]], encoding, tolerance=0.6)[0]
+                            
+                                if is_same_person:
+                                    person_id = known_ids[closest_match_index]
+                                    # remove the encoding from the list to avoid matching it again in the same image
+                                    known_encodings.pop(closest_match_index)
+                                    known_ids.pop(closest_match_index)
                                 else:
-                                    distances = face_recognition.face_distance(known_encodings, encoding)
-                                    closest_match_index = distances.argmin()
-                                    is_same_person = face_recognition.compare_faces([known_encodings[closest_match_index]], encoding)[0]
-                                    
-                                    if is_same_person:
-                                        person_id = known_ids[closest_match_index]
-                                    else:
-                                        person_id = self.db.create_person()
-                                        known_encodings.append(encoding)
-                                        known_ids.append(person_id)
+                                    person_id = self.db.create_person()
+
                             
                             # Check if this face is a better cover photo
                             current_best = self.db.get_person_score(person_id)
@@ -215,7 +212,7 @@ class FaceScannerWorker(QObject):
                                         
                                         face_crop = pil_original.crop((crop_left, crop_top, crop_right, crop_bottom))
                                         
-                                        create_square_thumbnail_from_pil(face_crop).save(face_thumb_path, "JPEG", quality=90)
+                                        create_square_thumbnail(face_crop).save(face_thumb_path, "JPEG", quality=90)
                                         
                                         self.db.update_person_cover_score(person_id, score)
                                 except Exception as e:
@@ -230,8 +227,6 @@ class FaceScannerWorker(QObject):
                         
                     except Exception as e:
                         print(f"Error scanning {file_path}: {e}")
-                        # Mark scanned anyway to avoid loop? Or keep trying?
-                        # Probably mark scanned to move on.
                         self.db.mark_image_scanned(image_id)
                         self.db.commit()
 
@@ -239,11 +234,7 @@ class FaceScannerWorker(QObject):
                 
             if self.db:
                 self.db.close()
-            
-            # Don't emit finished here individually unless all done, but signals logic relies on one scan finish?
-            # Actually ScannerSignals.finished signals the UI.
-            # We shouldn't emit if other threads are running?
-            # Or just let them run until stopped.
+        
             
         except Exception as e:
             print(f"Scanner crashed: {e}")
@@ -298,7 +289,7 @@ class FaceScanner(QObject):
             # Already running
             return
             
-        print("Starting multithreaded background scanner...")
+        # print("Starting multithreaded background scanner...")
         
         # DEBUG: Reduced to 1 thread to isolate crash cause
         thread_count = 1
@@ -323,7 +314,7 @@ class FaceScanner(QObject):
 
     @pyqtSlot()
     def stop_scan(self):
-        print("Stopping threads...")
+        # print("Stopping threads...")
         for worker in self.workers:
             worker.stop()
         

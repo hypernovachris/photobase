@@ -1,8 +1,8 @@
 import os
 import hashlib
 from PyQt6.QtCore import QObject, pyqtSlot, pyqtSignal, QRunnable, QThreadPool
-from PIL import Image
-from core.image_processing import create_square_thumbnail
+from PIL import Image, ImageOps
+from core.image_processing import create_and_save_square_thumbnail
 
 class ThumbnailRunnable(QRunnable):
     def __init__(self, file_path, thumb_path, success_signal, failure_signal):
@@ -23,7 +23,8 @@ class ThumbnailRunnable(QRunnable):
                 return
 
             with Image.open(self.file_path) as img:
-                create_square_thumbnail(img, self.thumb_path)
+                img = ImageOps.exif_transpose(img)
+                create_and_save_square_thumbnail(img, self.thumb_path)
             
             self.success_signal.emit(self.file_path, self.thumb_path)            
         except Exception as e:

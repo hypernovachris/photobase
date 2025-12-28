@@ -261,7 +261,8 @@ Item {
                                         
                                         onDoubleClicked: (mouse) => {
                                             if (mouse.button === Qt.LeftButton) {
-                                                galleryModel.open_file(modelData.path)
+                                                // galleryModel.open_file(modelData.path)
+                                                imageViewer.open(modelData.path)
                                             }
                                         }
                                     }
@@ -299,7 +300,10 @@ Item {
             onTriggered: {
                 var paths = galleryModel.get_selected_paths()
                  for (var i = 0; i < paths.length; i++) {
-                     galleryModel.open_file(paths[i])
+                     // galleryModel.open_file(paths[i])
+                     imageViewer.open(paths[i])
+                     // Only open the first one for now in viewer to avoid spamming or logic complexity
+                     break; 
                  }
             }
         }
@@ -338,5 +342,13 @@ Item {
 
         height: 400
         property bool isAddMode: false
+    }
+
+    ImageViewer {
+        id: imageViewer
+        z: 100 // Ensure it is on top
+        onClosed: {
+            // Optional cleanup
+        }
     }
 }

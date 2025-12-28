@@ -515,6 +515,7 @@ class GalleryModel(QAbstractListModel):
             
         db.connect()
         db.update_person_name(person_id, new_name)
+        db.commit()
         db.close()
         self.peopleChanged.emit()
 
@@ -535,3 +536,141 @@ class GalleryModel(QAbstractListModel):
         self.filterChanged.emit(name)
 
 
+
+    @pyqtSlot(str, result=QVariant)
+    def get_image_details(self, file_path):
+        if not file_path or not os.path.exists(file_path):
+            return None
+            
+        import datetime
+        dt = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
+        date_str = dt.strftime("%B %d, %Y, %I:%M %p")
+        
+        db.connect()
+        img_id = db.get_image_id(file_path)
+        tags = []
+        if img_id:
+            tags = [t[1] for t in db.get_tags_for_image(img_id)]
+        db.close()
+        
+        return {
+            "date": date_str,
+            "tags": tags
+        }
+
+    @pyqtSlot(str, result=list)
+    def get_people_in_image(self, file_path):
+        if not file_path:
+            return []
+            
+        db.connect()
+        img_id = db.get_image_id(file_path)
+        if not img_id:
+            db.close()
+            return []
+            
+        faces = db.get_faces_for_image(img_id) 
+        # Returns [(id, name, x, y, w, h, person_id), ...]
+        
+        # We also need UUIDs for thumbnails if we want to show Person Thumbnail as fallback
+        # Let's enrich the data
+        result = []
+        for face in faces:
+            fid, name, x, y, w, h, pid = face
+            
+            face_thumb_url = ""
+            if pid:
+                person_uuid = db.get_person_uuid(pid)
+                if person_uuid:
+                    thumb_path = os.path.abspath(os.path.join("thumbnails", "faces", f"{person_uuid}.jpg"))
+                    if os.path.exists(thumb_path):
+                        face_thumb_url = QUrl.fromLocalFile(thumb_path).toString()
+
+            result.append({
+                "face_id": fid,
+                "name": name if name else "",
+                "x": x, "y": y, "w": w, "h": h,
+                "person_id": pid,
+                "face_thumbnail_url": face_thumb_url
+            })
+        db.close()
+        return result
+
+    @pyqtSlot(int, int)
+    def reassign_face(self, face_id, new_person_id):
+        db.connect()
+        db.update_face_person_id(face_id, new_person_id)
+        db.commit()
+        db.close()
+        self.peopleChanged.emit()
+
+    @pyqtSlot(str, int)
+    def add_person_to_image(self, file_path, person_id):
+        if not file_path:
+            return
+        
+        db.connect()
+        img_id = db.get_image_id(file_path)
+        if img_id:
+            # Add a 'manual' face with 0 coordinates
+            # We don't have an encoding for this manual add, so None is appropriate.
+            db.add_face(img_id, person_id, b'', (0, 0, 0, 0))
+            db.commit()
+        db.close()
+        self.peopleChanged.emit()
+
+    @pyqtSlot(int, str)
+    def update_face_name(self, face_id, name):
+        name = name.strip()
+        db.connect()
+        # Logic: Update person name.
+        # Note: If multiple faces have same person, this updates the PERSON.
+        # If we want to assign a NEW person to this face, we need `reassign_face_to_person`. 
+        # But UI implies just editing the name next to the face. 
+        # If the user types a new name, does it rename "Alex" to "Alexander" (affecting all photos)? 
+        # Or does it say "This face is actually Bob"?
+        # User requirement: "allowing the user to edit them".
+        # If I see "Alex" and change to "Bob", typically I mean "This is not Alex, it is Bob".
+        # But if "Alex" doesn't exist, I'm creating a new person?
+        # Let's support renaming the person for now (simple), or creating a new person if specific name logic is complex.
+        # Actually, renaming the PERSON is dangerous if it affects others. 
+        # But for MVP "Edit them" often means "Update this person's name".
+        # Let's assume updating the person's name for now (Global Rename).
+        
+        db.update_face_person_name(face_id, name)
+        db.commit()
+        db.close()
+        self.peopleChanged.emit()
+
+    @pyqtSlot(int)
+    def remove_face(self, face_id):
+        db.connect()
+        db.remove_face(face_id)
+        db.commit()
+        db.close()
+        self.peopleChanged.emit()
+
+    @pyqtSlot(str, str)
+    def add_tag_to_image_path(self, file_path, tag_name):
+        db.connect()
+        img_id = db.get_image_id(file_path)
+        tag_id = db.get_or_create_tag(tag_name)
+        if img_id and tag_id:
+             db.add_tag_to_image(img_id, tag_id)
+             db.commit()
+             self.tagsChanged.emit()
+        db.close()
+
+    @pyqtSlot(str, str)
+    def remove_tag_from_image_path(self, file_path, tag_name):
+        db.connect()
+        img_id = db.get_image_id(file_path)
+        # We need tag id
+        # get_or_create is safe? Yes, if it exists we get ID. If not created, we get ID.
+        # If we remove a tag that doesn't exist, nothing happens.
+        tag_id = db.get_or_create_tag(tag_name)
+        if img_id and tag_id:
+             db.remove_tag_from_image(img_id, tag_id)
+             db.commit()
+             self.tagsChanged.emit()
+        db.close()

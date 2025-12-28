@@ -166,7 +166,28 @@ Item {
                         }
                     }
                 }
+
+                // About Section
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    Label {
+                        text: "About"
+                        font.bold: true
+                        color: theme.textColor
+                        font.pixelSize: 18
+                    }
+                    Button {
+                        text: "About Photobase"
+                        onClicked: aboutDialog.open()
+                    }
+                }
+
             }
         }
+    }
+
+    About {
+        id: aboutDialog
     }
 }

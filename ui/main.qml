@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
+
+
 ApplicationWindow {
     visible: true
     width: 1000
@@ -72,6 +74,8 @@ ApplicationWindow {
         Settings {
         }
     }
+    
+
     footer: ToolBar {
         height: 30
         background: Rectangle {

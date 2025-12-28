@@ -415,4 +415,30 @@ class Database:
       return self.cursor.fetchall()
 
 
+
+  def get_faces_for_image(self, image_id):
+      self.cursor.execute("""
+          SELECT f.id, p.name, f.x, f.y, f.w, f.h, p.id
+          FROM faces f
+          LEFT JOIN people p ON f.person_id = p.id
+          WHERE f.image_id = ?
+      """, (image_id,))
+      return self.cursor.fetchall()
+
+  def remove_face(self, face_id):
+      self.cursor.execute("DELETE FROM faces WHERE id = ?", (face_id,))
+
+  def update_face_person_name(self, face_id, name):
+      # Helper to update person name associated with a face
+      # First find person_id for face
+      self.cursor.execute("SELECT person_id FROM faces WHERE id = ?", (face_id,))
+      res = self.cursor.fetchone()
+      if res:
+          person_id = res[0]
+          self.update_person_name(person_id, name)
+
+  def update_face_person_id(self, face_id, new_person_id):
+      self.cursor.execute("UPDATE faces SET person_id = ? WHERE id = ?", (new_person_id, face_id))
+
+
 db = Database()

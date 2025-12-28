@@ -4,7 +4,7 @@ import time
 from PIL import Image
 from core.database import db
 
-def create_square_thumbnail(image, save_path, size=(128, 128)):
+def create_and_save_square_thumbnail(image, save_path, size=(128, 128)):
     """
     Creates a square thumbnail from a PIL Image object and saves it to save_path.
     
@@ -13,14 +13,14 @@ def create_square_thumbnail(image, save_path, size=(128, 128)):
         save_path (str): The path to save the thumbnail to.
         size (tuple): The target size (width, height). Default (128, 128).
     """
-    thumb = create_square_thumbnail_from_pil(image, size)
+    thumb = create_square_thumbnail(image, size)
     
     # Ensure directory exists
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     thumb.save(save_path, "JPEG")
 
 
-def create_square_thumbnail_from_pil(image, size=(128, 128)):
+def create_square_thumbnail(image, size=(128, 128)):
     """
     Creates a square thumbnail from a PIL Image object.
     
@@ -59,7 +59,7 @@ class ImageScanner:
     files_to_update = []
     found_files = set()
 
-    print("Starting fast scan...")
+    # print("Starting fast scan...")
     start_time = time.time()
 
     # 1. Identify files to process
@@ -88,7 +88,7 @@ class ImageScanner:
 
     # 2. Update DB in batches (Processing is just DB inserts now, no image IO)
     if files_to_update:
-        print(f"Updating database for {len(files_to_update)} files...")
+        # print(f"Updating database for {len(files_to_update)} files...")
         batch_count = 0
         for entry in files_to_update:
             self.db.add_or_update_image(*entry)
@@ -101,7 +101,7 @@ class ImageScanner:
     # 3. Cleanup missing files
     self.db.remove_missing_files(found_files)
     
-    print(f"Scan completed in {time.time() - start_time:.2f} seconds.")
+    # print(f"Scan completed in {time.time() - start_time:.2f} seconds.")
   
   def is_image(self, file_path):
     valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
