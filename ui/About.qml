@@ -38,12 +38,14 @@ Dialog {
 
         // License Scroll Area
         ScrollView {
+            id: licenseScrollView
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
             ColumnLayout {
-                width: parent.width - 20
+                width: licenseScrollView.availableWidth
                 spacing: 20
 
                 // Lucide Icons Section

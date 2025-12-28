@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 
 Item {
     ColumnLayout {
@@ -139,24 +140,78 @@ Item {
                             
                             // Buttons inside the container
                             RowLayout {
-                                Layout.alignment: Qt.AlignRight
+                                // Layout.alignment: Qt.AlignRight
                                 
-                                Button {
-                                    text: "Add"
-                                    onClicked: settingsController.addPath()
-                                    // Basic styling if needed, or rely on Theme via palette in main? 
-                                    // For now standard controls look okay, but let's apply partial palette if possible or leave default
-                                }
-                                
-                                Button {
-                                    text: "Remove"
-                                    enabled: pathsList.currentIndex >= 0
-                                    onClicked: {
-                                        if (pathsList.currentIndex >= 0) {
-                                            settingsController.removePath(pathsList.currentIndex)
+                                // Add button
+                                Item {
+                                    width: 20
+                                    height: 20
+                                    Layout.alignment: Qt.AlignBottom
+
+                                    Image {
+                                        id: addIcon
+                                        source: "file:assets/icons/plus.svg" 
+                                        sourceSize.width: 20
+                                        sourceSize.height: 20
+                                        visible: false
+                                    }
+
+                                    MultiEffect {
+                                        id: addEffect
+                                        source: addIcon
+                                        anchors.fill: parent
+                                        colorization: 1.0
+                                        colorizationColor: theme.buttonTextColor
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            settingsController.addPath()
                                         }
                                     }
                                 }
+
+                                // Remove button
+                                Item {
+                                    width: 20
+                                    height: 20
+                                    Layout.alignment: Qt.AlignBottom
+
+                                    Image {
+                                        id: removeIcon
+                                        source: "file:assets/icons/minus.svg" 
+                                        sourceSize.width: 20
+                                        sourceSize.height: 20
+                                        visible: false
+                                    }
+
+                                    MultiEffect {
+                                        id: removeEffect
+                                        source: removeIcon
+                                        anchors.fill: parent
+                                        colorization: 1.0
+                                        colorizationColor: theme.buttonTextColor
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            if (pathsList.currentIndex >= 0) {
+                                                settingsController.removePath(pathsList.currentIndex)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Spacer
+                                Item {
+                                    Layout.fillWidth: true
+                                }
+
+                                // Apply Changes button
                                 Button {
                                     text: "Apply Changes"
                                     onClicked: settingsController.applyChanges()
@@ -166,19 +221,53 @@ Item {
                     }
                 }
 
-                // About Section
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-                    Label {
-                        text: "About"
-                        font.bold: true
-                        color: theme.textColor
-                        font.pixelSize: 18
+                Item {
+                    implicitWidth: aboutRow.implicitWidth
+                    implicitHeight: aboutRow.implicitHeight
+                    
+                    Layout.fillWidth: false 
+
+                    // 2. The Layout handles the horizontal positioning
+                    RowLayout {
+                        id: aboutRow
+                        anchors.fill: parent
+                        spacing: 10
+                        
+                        Text {
+                            text: "About Photobase"
+                            color: theme.textColor
+                            verticalAlignment: Text.AlignVCenter
+                        }
+
+                        // Link icon
+                        Item {
+                            width: 16
+                            height: 16
+                            Layout.alignment: Qt.AlignVCenter
+
+                            Image {
+                                id: linkIcon
+                                source: "file:assets/icons/external-link-3px.svg"
+                                sourceSize: Qt.size(16, 16)
+                                visible: false
+                            }
+
+                            MultiEffect {
+                                source: linkIcon
+                                anchors.fill: parent
+                                colorization: 1.0
+                                colorizationColor: theme.textColor
+                            }
+                        }
                     }
-                    Button {
-                        text: "About Photobase"
-                        onClicked: aboutDialog.open()
+
+                    // 3. The MouseArea fills the entire Item (Text + Icon)
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            aboutDialog.open()
+                        }
                     }
                 }
 

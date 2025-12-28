@@ -348,6 +348,11 @@ Rectangle {
                                     }
                                 }
                             }
+
+                            // Spacer
+                            Item {
+                                Layout.fillWidth: true
+                            }
                             
                             Item {
                                 width: 30
@@ -382,109 +387,185 @@ Rectangle {
                         }
                         
                         // Path
-                        Text {
-                            text: root.currentImagePath ? root.currentImagePath.substring(0, root.currentImagePath.lastIndexOf(root.currentImagePath.split('\\').pop().split('/').pop())).slice(0, -1) : ""
-                            font.pixelSize: 12
-                            color: theme.textColor
-                            opacity: 0.7
-                            elide: Text.ElideMiddle
+                        RowLayout {
                             Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignLeft
+                            spacing: 10
                             
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    galleryModel.reveal_file(root.currentImagePath)
+                            // Hard drive icon
+                            Item {
+                                width: 20
+                                height: 20
+                                Image {
+                                    id: hardDriveIcon
+                                    source: "file:assets/icons/hard-drive.svg" 
+                                    sourceSize.width: 20
+                                    sourceSize.height: 20
+                                    visible: false  
+                                }
+                                MultiEffect {
+                                    source: hardDriveIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.textColor
+                                }
+                            }
+                            
+                            Text {
+                                text: root.currentImagePath ? root.currentImagePath.substring(0, root.currentImagePath.lastIndexOf(root.currentImagePath.split('\\').pop().split('/').pop())).slice(0, -1) : ""
+                                font.pixelSize: 14
+                                color: theme.textColor
+                                elide: Text.ElideMiddle
+                                Layout.fillWidth: true
+                                
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        galleryModel.reveal_file(root.currentImagePath)
+                                    }
                                 }
                             }
                         }
                         
                         // Date
-                        Text {
-                            text: root.currentImageDetails ? root.currentImageDetails.date : ""
-                            font.pixelSize: 14
-                            color: theme.textColor
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignLeft
+                            spacing: 10
+                            // Clock icon
+                            Item {
+                                width: 20
+                                height: 20
+                                Image {
+                                    id: clockIcon
+                                    source: "file:assets/icons/clock.svg" 
+                                    sourceSize.width: 20
+                                    sourceSize.height: 20
+                                    visible: false  
+                                }
+                                MultiEffect {
+                                    source: clockIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.textColor
+                                }
+                            }
+                            Text {
+                                text: root.currentImageDetails ? root.currentImageDetails.date : ""
+                                font.pixelSize: 14
+                                color: theme.textColor
+                            }
                         }
                         
                         // Tags
-                        ColumnLayout {
+                        Flow {
                             Layout.fillWidth: true
-                            spacing: 5
-                            
-                            Flow {
-                                Layout.fillWidth: true
-                                spacing: 8
+                            spacing: 10
+                            readonly property int rowHeight: 30
 
-                                Text {
-                                    text: "Tags:"
-                                    font.pixelSize: 16
-                                    font.bold: true
-                                    color: theme.textColor
+                            // Tags icon
+                            Item {
+                                height: parent.rowHeight
+                                width: 20
+                                Item {
+                                    width: 20
+                                    height: 20
+                                    anchors.centerIn: parent
+                                    Image {
+                                        id: tagsIcon
+                                        source: "file:assets/icons/tag.svg" 
+                                        sourceSize.width: 20
+                                        sourceSize.height: 20
+                                        visible: false  
+                                    }
+                                    MultiEffect {
+                                        source: tagsIcon
+                                        anchors.fill: parent
+                                        colorization: 1.0
+                                        colorizationColor: theme.textColor
+                                    }
                                 }
-                                
-                                Repeater {
-                                    model: root.currentImageDetails ? root.currentImageDetails.tags : []
-                                    delegate: Rectangle {
-                                        height: 30
-                                        width: tagRow.implicitWidth + 10
-                                        radius: 15
-                                        color: theme.buttonColor
-                                        // border.color: theme.textColor
-                                        // border.width: 1
+                            }
+
+                            // None Label
+                            Text {
+                                height: parent.rowHeight
+                                text: "(None)"
+                                font.pixelSize: 14
+                                color: theme.textColor
+                                visible: root.currentImageDetails ? root.currentImageDetails.tags.length === 0 : true
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            // Tags
+                            Repeater {
+                                visible: root.currentImageDetails ? root.currentImageDetails.tags.length > 0 : false
+                                model: root.currentImageDetails ? root.currentImageDetails.tags : []
+                                delegate: Rectangle {
+                                    height: 30
+                                    width: tagRow.implicitWidth + 10
+                                    radius: 15
+                                    color: theme.buttonColor
+                                    // border.color: theme.textColor
+                                    // border.width: 1
+                                    
+                                    Row {
+                                        id: tagRow
+                                        anchors.centerIn: parent
+                                        spacing: 5
+                                        padding: 5
                                         
-                                        Row {
-                                            id: tagRow
-                                            anchors.centerIn: parent
-                                            spacing: 5
-                                            padding: 5
-                                            
-                                            Text {
-                                                text: modelData
-                                                color: theme.buttonTextColor
-                                                anchors.verticalCenter: parent.verticalCenter
+                                        Text {
+                                            text: modelData
+                                            color: theme.buttonTextColor
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        
+                                        Item {
+                                            width: 16
+                                            height: 16
+                                            anchors.verticalCenter: parent.verticalCenter
+
+                                            Image {
+                                                id: removeIcon
+                                                source: "file:assets/icons/x.svg" 
+                                                sourceSize.width: 16
+                                                sourceSize.height: 16
+                                                visible: false
                                             }
-                                            
-                                            Item {
-                                                width: 16
-                                                height: 16
-                                                anchors.verticalCenter: parent.verticalCenter
 
-                                                Image {
-                                                    id: removeIcon
-                                                    source: "file:assets/icons/x.svg" 
-                                                    sourceSize.width: 16
-                                                    sourceSize.height: 16
-                                                    visible: false
-                                                }
+                                            MultiEffect {
+                                                id: effect
+                                                source: removeIcon
+                                                anchors.fill: parent
+                                                colorization: 1.0
+                                                colorizationColor: theme.buttonTextColor
+                                            }
 
-                                                MultiEffect {
-                                                    id: effect
-                                                    source: removeIcon
-                                                    anchors.fill: parent
-                                                    colorization: 1.0
-                                                    colorizationColor: theme.buttonTextColor
-                                                }
-
-                                                MouseArea {
-                                                    anchors.fill: parent
-                                                    // anchors.margins: -10 
-                                                    cursorShape: Qt.PointingHandCursor
-                                                    onClicked: {
-                                                        galleryModel.remove_tag_from_image_path(root.currentImagePath, modelData)
-                                                        root.currentImageDetails = galleryModel.get_image_details(root.currentImagePath)
-                                                    }
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                // anchors.margins: -10 
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    galleryModel.remove_tag_from_image_path(root.currentImagePath, modelData)
+                                                    root.currentImageDetails = galleryModel.get_image_details(root.currentImagePath)
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                
-                                // Add Tag Button
+                            }
+
+                            // Add Tag Button
+                            Item {
+                                height: parent.rowHeight
+                                width: 20
                                 Item {
                                     width: 20
                                     height: 20
-                                    // anchors.verticalCenter: parent.verticalCenter -- Invalid in Flow
-
+                                    visible: true
+                                    anchors.verticalCenter: parent.verticalCenter
                                     Image {
                                         id: addIcon
                                         source: "file:assets/icons/plus.svg" 
@@ -498,7 +579,7 @@ Rectangle {
                                         source: addIcon
                                         anchors.fill: parent
                                         colorization: 1.0
-                                        colorizationColor: theme.buttonTextColor
+                                        colorizationColor: theme.textColor
                                     }
 
                                     MouseArea {
@@ -515,11 +596,27 @@ Rectangle {
                         }
                         
                         // Location (Placeholder)
-                        Row {
-                            spacing: 5
-                            Text {
-                                text: "Location:"
-                                color: theme.textColor
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignLeft
+                            spacing: 10
+                            // Pin icon
+                            Item {
+                                height: 20
+                                width: 20
+                                Image {
+                                    id: pinIcon
+                                    source: "file:assets/icons/map-pin.svg"
+                                    sourceSize.width: 20
+                                    sourceSize.height: 20
+                                    visible: false
+                                }
+                                MultiEffect {
+                                    source: pinIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.textColor
+                                }
                             }
                             Text {
                                 text: "No location data"
@@ -529,21 +626,84 @@ Rectangle {
                             }
                         }
                         
-                        // People Count
-                        Text {
-                            text: (root.peopleList ? root.peopleList.length : 0) + " people detected..."
-                            font.pixelSize: 16
-                            color: theme.textColor
-                            
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    rightStack.currentIndex = 1
+                        // People
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignLeft
+                            spacing: 10
+
+                            // People icon
+                            Item {
+                                height: 20
+                                width: 20
+                                Image {
+                                    id: peopleIcon
+                                    source: "file:assets/icons/scan-face.svg"
+                                    sourceSize.width: 20
+                                    sourceSize.height: 20
+                                    visible: false
+                                }
+                                MultiEffect {
+                                    source: peopleIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.textColor
+                                }
+                            }
+
+                            // Label
+                            Item {
+                                // 1. Give the container a size based on its content
+                                implicitWidth: peopleRow.implicitWidth
+                                implicitHeight: peopleRow.implicitHeight
+                                
+                                // Allow it to be positioned within your external Layout
+                                Layout.fillWidth: false 
+
+                                // 2. The Layout handles the horizontal positioning
+                                RowLayout {
+                                    id: peopleRow
+                                    anchors.fill: parent
+                                    spacing: 10
+                                    
+                                    Text {
+                                        text: (root.peopleList ? root.peopleList.length : "None") + " detected"
+                                        color: theme.textColor
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+
+                                    // Link icon
+                                    Item {
+                                        width: 16
+                                        height: 16
+                                        Layout.alignment: Qt.AlignVCenter
+
+                                        Image {
+                                            id: linkIcon
+                                            source: "file:assets/icons/external-link-3px.svg"
+                                            sourceSize: Qt.size(16, 16)
+                                            visible: false
+                                        }
+
+                                        MultiEffect {
+                                            source: linkIcon
+                                            anchors.fill: parent
+                                            colorization: 1.0
+                                            colorizationColor: theme.textColor
+                                        }
+                                    }
+                                }
+
+                                // 3. The MouseArea fills the entire Item (Text + Icon)
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        rightStack.currentIndex = 1
+                                    }
                                 }
                             }
                         }
-                        
                         Item { Layout.fillHeight: true }
                     }
                 }
