@@ -29,27 +29,12 @@ Dialog {
                 commonTags = []
             }
         } else {
-            commonTags = isAddMode ? [] : galleryModel.get_common_tags()
+            commonTags = []
         }
         updateTagsState()
     }
 
     onAccepted: {
-        // Apply changes
-        // For each tag that is checked -> add
-        // For each tag that is unchecked -> remove
-        // Optimization: Only if changed from original state? 
-        // For now, simpler to just apply/remove based on final state could be redundant but safe.
-        // Actually, better:
-        // iterate allTags.
-        // if checked and NOT in commonTags -> add
-        // if unchecked and IN commonTags -> remove
-        // Wait, what if it was mixed? (Not in common, but on some). 
-        // If user Checks it -> Add to ALL properly.
-        // If user Unchecks it -> Remove from ALL properly.
-        // So simple Logic:
-        // Checked -> apply_tag_to_selection
-        // Unchecked -> remove_tag_from_selection
         
         for (var i = 0; i < allTags.length; i++) {
             var tag = allTags[i]
@@ -64,9 +49,10 @@ Dialog {
             } else {
                 if (isChecked) {
                     galleryModel.apply_tag_to_selection(tag)
-                } else if (!isAddMode) {
-                    galleryModel.remove_tag_from_selection(tag)
-                }
+                } 
+                // When editing a selection, we DO NOT remove unchecked tags
+                // because we don't know if they were originally present on some items.
+                // This effectively disables "bulk remove" via this dialog, which is desired.
             }
         }
         tagsUpdated()

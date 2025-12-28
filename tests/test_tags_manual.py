@@ -66,11 +66,7 @@ def test_tagging_backend():
     assert "Vacation" in tag_names_img2
     assert "Family" not in tag_names_img2
     
-    # 6. Test Common Tags
-    common = db.get_common_tags_for_images([img1_id, img2_id])
-    common_names = [t[1] for t in common]
-    assert "Vacation" in common_names
-    assert "Family" not in common_names
+
     
     # 7. Test Filtering (Query Logic)
     # We can simulate the query used in gallery_model
@@ -98,6 +94,30 @@ def test_tagging_backend():
     tag_names_img1 = [t[1] for t in tags_img1]
     assert "Vacation" not in tag_names_img1
     assert "Family" in tag_names_img1
+    
+    db.close()
+
+    # 9. Test Orphan Tag Clean up
+    # Re-open for clean state check or continue
+    db = Database(db_path)
+    db.connect()
+    
+    # We removed tag1 from img1. It should still be on img2.
+    # Verify tag1 still exists in tags table
+    db.cursor.execute("SELECT count(*) FROM tags WHERE id = ?", (tag1_id,))
+    assert db.cursor.fetchone()[0] == 1, "Tag1 should still exist"
+    
+    # Remove tag1 from img2 (last usage)
+    db.remove_tag_from_image(img2_id, tag1_id)
+    db.commit()
+    
+    # Verify tag1 is GONE from tags table
+    db.cursor.execute("SELECT count(*) FROM tags WHERE id = ?", (tag1_id,))
+    assert db.cursor.fetchone()[0] == 0, "Tag1 should be deleted after last usage removed"
+
+    # Tag2 ("Family") is on img1. let's check it exists.
+    db.cursor.execute("SELECT count(*) FROM tags WHERE id = ?", (tag2_id,))
+    assert db.cursor.fetchone()[0] == 1, "Tag2 should still exist"
     
     db.close()
     if os.path.exists(db_path):

@@ -43,7 +43,7 @@ class ThumbnailGenerator(QObject):
         # Queue Management
         self.queue = [] # Stack for LIFO
         self.active_tasks = 0
-        self.max_concurrent_tasks = 4 
+        self.max_concurrent_tasks = 4
         self.max_queue_size = 50 
         
         self.thumbnailReady.connect(self._on_thumbnail_ready)

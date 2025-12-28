@@ -212,6 +212,22 @@ class Database:
       except sqlite3.Error:
           return None
 
+  def rename_tag(self, tag_id, new_name):
+      new_name = new_name.strip()
+      if not new_name:
+          return False
+      
+      try:
+          # check for existing
+          self.cursor.execute("SELECT id FROM tags WHERE name = ?", (new_name,))
+          if self.cursor.fetchone():
+              return False
+              
+          self.cursor.execute("UPDATE tags SET name = ? WHERE id = ?", (new_name, tag_id))
+          return True
+      except sqlite3.Error:
+          return False
+
   def add_tag_to_image(self, image_id, tag_id):
       try:
           self.cursor.execute("INSERT OR IGNORE INTO image_tags (image_id, tag_id) VALUES (?, ?)", (image_id, tag_id))
@@ -221,6 +237,13 @@ class Database:
 
   def remove_tag_from_image(self, image_id, tag_id):
       self.cursor.execute("DELETE FROM image_tags WHERE image_id = ? AND tag_id = ?", (image_id, tag_id))
+      
+      # Check if any images are still using this tag
+      self.cursor.execute("SELECT COUNT(*) FROM image_tags WHERE tag_id = ?", (tag_id,))
+      count = self.cursor.fetchone()[0]
+      
+      if count == 0:
+          self.cursor.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
 
   def get_tags_for_image(self, image_id):
       self.cursor.execute("""
@@ -240,6 +263,7 @@ class Database:
       # Returns [(name, count, cover_path, cover_thumb_path), ...]
       query = """
         SELECT 
+            t.id,
             t.name, 
             COUNT(it.image_id) as cnt,
             (
@@ -267,25 +291,7 @@ class Database:
       self.cursor.execute(query)
       return self.cursor.fetchall()
 
-  def get_common_tags_for_images(self, image_ids):
-      if not image_ids:
-          return []
-      placeholders = ",".join("?" for _ in image_ids)
-      query = f"""
-          SELECT t.id, t.name
-          FROM tags t
-          JOIN image_tags it ON t.id = it.tag_id
-          WHERE it.image_id IN ({placeholders})
-          GROUP BY t.id, t.name
-          HAVING COUNT(DISTINCT it.image_id) = ?
-          ORDER BY t.name
-      """
-      args = list(image_ids)
-      args.append(len(image_ids))
-      
-      self.cursor.execute(query, tuple(args))
-      self.cursor.execute(query, tuple(args))
-      return self.cursor.fetchall()
+
 
   # --- People & Faces ---
 
@@ -427,15 +433,6 @@ class Database:
 
   def remove_face(self, face_id):
       self.cursor.execute("DELETE FROM faces WHERE id = ?", (face_id,))
-
-  def update_face_person_name(self, face_id, name):
-      # Helper to update person name associated with a face
-      # First find person_id for face
-      self.cursor.execute("SELECT person_id FROM faces WHERE id = ?", (face_id,))
-      res = self.cursor.fetchone()
-      if res:
-          person_id = res[0]
-          self.update_person_name(person_id, name)
 
   def update_face_person_id(self, face_id, new_person_id):
       self.cursor.execute("UPDATE faces SET person_id = ? WHERE id = ?", (new_person_id, face_id))

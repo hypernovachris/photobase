@@ -160,7 +160,6 @@ Item {
                                 Button {
                                     text: "Apply Changes"
                                     onClicked: settingsController.applyChanges()
-                                    font.bold: true
                                 }
                             }
                         }

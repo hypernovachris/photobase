@@ -88,7 +88,6 @@ Item {
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: {
                                             galleryModel.set_tag_filter(tagData.name)
-                                            // Optional: Switch tab if we could.
                                         }
                                     }
                                 }
@@ -97,14 +96,22 @@ Item {
                                     width: 140
                                     spacing: 2
                                     
-                                    Text {
+                                    TextField {
                                         text: tagData.name
+                                        placeholderText: "Tag name"
                                         color: theme.textColor
+                                        background: Rectangle { color: "transparent" }
+                                        horizontalAlignment: TextInput.AlignHCenter
                                         font.bold: true
                                         font.pixelSize: 16
-                                        elide: Text.ElideRight
                                         width: parent.width
-                                        horizontalAlignment: Text.AlignHCenter
+                                        
+                                        onEditingFinished: {
+                                            if (text !== tagData.name) {
+                                                galleryModel.rename_tag(tagData.id, text)
+                                            }
+                                            focus = false
+                                        }
                                     }
                                     
                                     Text {
@@ -122,10 +129,6 @@ Item {
             }
         }
     }
-    
-    // Auto-refresh logic (Needs to re-trigger binding or model update)
-    // Repeater model binding should handle it if 'get_all_tags_model' was a property or signal.
-    // Since it's a function, we need to manually call it.
     
     property var tagsModel: []
     

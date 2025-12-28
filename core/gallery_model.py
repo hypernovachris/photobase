@@ -188,13 +188,6 @@ class GalleryModel(QAbstractListModel):
 
     @pyqtSlot(str, int)
     def handle_selection(self, path, modifiers):
-        """
-        modifiers: Qt.KeyboardModifiers flags (as int)
-        Qt.ControlModifier = 0x04000000 (roughly, but we can just check if it's non-zero/specific bit)
-        Actually from QML it might send the enum value.
-        Qt.ShiftModifier = 0x02000000
-        Qt.ControlModifier = 0x04000000
-        """
         
         ctrl_pressed = (modifiers & Qt.KeyboardModifier.ControlModifier.value)
         shift_pressed = (modifiers & Qt.KeyboardModifier.ShiftModifier.value)
@@ -214,22 +207,6 @@ class GalleryModel(QAbstractListModel):
             if start_pos and end_pos:
                 # Traverse range
                 range_paths = self._get_paths_in_range(start_pos, end_pos)
-                
-                # If CTRL is NOT pressed, clear previous first (standard behavior often behaves like this, 
-                # but standard file explorer usually extends selection. 
-                # Requirements said: "Holding Shift ... selects every thumbnail between it and the last selected"
-                # Usually standard behavior:
-                # Click A. Shift+Click B -> Selects A..B. 
-                # Click A. Click C. Shift+Click B -> Selects C..B (clears A usually, unless Ctrl held?)
-                # Win Explorer: Click A. Shift+Click B -> A..B selected.
-                # Let's assume Shift+Click REPLACES selection with the range, unless Ctrl is also held?
-                # Actually user requirement: "Holding Shift while clicking a thumbnail selects every thumbnail between it and the last selected thumbnail (inclusive)"
-                # Implicitly, does it keep others? 
-                # Let's stick to: If Ctrl is NOT held, we normally clear selection first in a simple explorer.
-                # But "adds it" was specific for Ctrl. 
-                # I will implement: Shift+Click adds the range. If they want to clear, they click without modifiers first.
-                # Actually, usually Shift+Click starts a NEW selection range anchored at the 'current' item.
-                # Let's just Clear then Select Range if Ctrl is not pressed, similar to single click.
                 
                 if not ctrl_pressed:
                     new_selection.clear()
@@ -345,13 +322,7 @@ class GalleryModel(QAbstractListModel):
             return
             
         db.connect()
-        # resolving id from name first
-        # Ideally we should pass IDs but UI might send names.
-        # Let's get ID.
-        # But wait, we don't have get_tag_id_by_name exposed but get_or_create does return ID.
-        # We shouldn't create if we are removing though.
-        # Let's use get_or_create for now or add a helper.
-        # Actually, if we use get_or_create it's fine, if it didn't exist it wouldn't be on the image.
+
         tag_id = db.get_or_create_tag(tag_name) 
         
         if tag_id:
@@ -380,20 +351,17 @@ class GalleryModel(QAbstractListModel):
         
         result = []
         for row in rows:
-            name, count, cover_path, cover_thumb_path = row
+            tag_id, name, count, cover_path, cover_thumb_path = row
             thumb_url = ""
             
             # If we have a thumbnail path, verify it exists and convert to QUrl
             if cover_thumb_path and os.path.exists(cover_thumb_path):
                 thumb_url = QUrl.fromLocalFile(os.path.abspath(cover_thumb_path)).toString()
             elif cover_path and os.path.exists(cover_path):
-                 # Fallback to full image if thumbnail missing (though main view generaates them)
-                 # Or just leave empty and let UI handle placeholder?
-                 # Assuming if cover_path exists, we might want to trigger generation or show it.
-                 # Let's show it.
-                 thumb_url = QUrl.fromLocalFile(os.path.abspath(cover_path)).toString()
+                thumb_url = QUrl.fromLocalFile(os.path.abspath(cover_path)).toString()
             
             result.append({
+                "id": tag_id,
                 "name": name,
                 "count": count,
                 "thumbnail": thumb_url,
@@ -401,26 +369,7 @@ class GalleryModel(QAbstractListModel):
             })
         return result
 
-    @pyqtSlot(result=list)
-    def get_common_tags(self):
-        if not self._selected_paths:
-            return []
-            
-        db.connect()
-        # Resolve all paths to IDs
-        img_ids = []
-        for path in self._selected_paths:
-            iid = db.get_image_id(path)
-            if iid:
-                img_ids.append(iid)
-                
-        if not img_ids:
-            db.close()
-            return []
-            
-        common_tags = db.get_common_tags_for_images(img_ids)
-        db.close()
-        return [t[1] for t in common_tags]
+
 
     # --- Filtering ---
     
@@ -453,6 +402,15 @@ class GalleryModel(QAbstractListModel):
         self._filter_person_name = None
         self.load_images()
         self.filterChanged.emit("")
+        
+    @pyqtSlot(int, str)
+    def rename_tag(self, tag_id, new_name):
+        db.connect()
+        success = db.rename_tag(tag_id, new_name)
+        if success:
+            db.commit()
+            self.tagsChanged.emit()
+        db.close()
         
     @pyqtSlot(result=str)
     def get_active_filter(self):
@@ -659,29 +617,6 @@ class GalleryModel(QAbstractListModel):
             # We don't have an encoding for this manual add, so None is appropriate.
             db.add_face(img_id, person_id, b'', (0, 0, 0, 0))
             db.commit()
-        db.close()
-        self.peopleChanged.emit()
-
-    @pyqtSlot(int, str)
-    def update_face_name(self, face_id, name):
-        name = name.strip()
-        db.connect()
-        # Logic: Update person name.
-        # Note: If multiple faces have same person, this updates the PERSON.
-        # If we want to assign a NEW person to this face, we need `reassign_face_to_person`. 
-        # But UI implies just editing the name next to the face. 
-        # If the user types a new name, does it rename "Alex" to "Alexander" (affecting all photos)? 
-        # Or does it say "This face is actually Bob"?
-        # User requirement: "allowing the user to edit them".
-        # If I see "Alex" and change to "Bob", typically I mean "This is not Alex, it is Bob".
-        # But if "Alex" doesn't exist, I'm creating a new person?
-        # Let's support renaming the person for now (simple), or creating a new person if specific name logic is complex.
-        # Actually, renaming the PERSON is dangerous if it affects others. 
-        # But for MVP "Edit them" often means "Update this person's name".
-        # Let's assume updating the person's name for now (Global Rename).
-        
-        db.update_face_person_name(face_id, name)
-        db.commit()
         db.close()
         self.peopleChanged.emit()
 
