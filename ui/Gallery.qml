@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 
 Item {
     property string activeFilter: ""
@@ -13,12 +14,7 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        // anchors.margins: 20
-        // spacing: 20 removed
 
-
-        
-        // ListView with Header
         ListView {
             id: listView
             Layout.fillWidth: true
@@ -37,41 +33,45 @@ Item {
                 spacing: 20
                 padding: 20
 
-                
-                Label {
-                    text: "Gallery"
-                    color: theme.textColor
-                    font.bold: true
-                    font.pixelSize: 32
-                }
-                
-                // Filter Banner
-                Rectangle {
-                    width: parent.width - 40 // Account for padding
-                    height: 50
-                    color: theme.isDark ? "#1e3a5f" : "#e3f2fd"
-                    visible: activeFilter !== ""
-                    
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.margins: 5
-                        spacing: 10
-                        
-                        Label {
-                            text: "Filtered by tag: <b>" + activeFilter + "</b>"
-                            color: theme.textColor
-                            font.pixelSize: 16
-                            Layout.fillWidth: true
+                RowLayout {
+                    spacing: 10
+
+                    // Back Button
+                    Item {
+                        width: 30
+                        height: 30
+                        visible: activeFilter !== ""
+
+                        Image {
+                            id: backIcon
+                            source: "file:assets/icons/arrow-left.svg" 
+                            sourceSize.width: 30
+                            sourceSize.height: 30
+                            visible: false
                         }
-                        
-                        Button {
-                            text: "Clear Filter"
+
+                        MultiEffect {
+                            id: backIconEffect
+                            source: backIcon
+                            anchors.fill: parent
+                            colorization: 1.0
+                            colorizationColor: theme.textColor
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
                             onClicked: galleryModel.clear_tag_filter()
                         }
                     }
+
+                    Label {
+                        text: activeFilter !== "" ? activeFilter : "Gallery"
+                        color: theme.textColor
+                        font.bold: true
+                        font.pixelSize: 32
+                    }
                 }
-                
-                
             }
             footer: Item {
                 height: 50
@@ -189,9 +189,7 @@ Item {
                                 
                                 property bool isVisible: false
                                 
-                                function calculateVisibility() {
-                                    // if (listView.isScrolling) return // Removed to allow updates during scroll
-                                    
+                                function calculateVisibility() {                                    
                                     var pos = mapToItem(listView, 0, 0)
                                     if (pos.y < listView.height && pos.y + height > 0) {
                                         isVisible = true
@@ -348,7 +346,7 @@ Item {
         id: imageViewer
         z: 100 // Ensure it is on top
         onClosed: {
-            // Optional cleanup
+            // cleanup
         }
     }
 }
