@@ -604,6 +604,49 @@ class GalleryModel(QAbstractListModel):
         db.close()
         self.peopleChanged.emit()
 
+    @pyqtSlot(str, result=str)
+    def get_next_image_path(self, current_path):
+        coords = self._find_path_coordinates(current_path)
+        if not coords:
+            return ""
+        
+        s_idx, i_idx = coords
+        section = self._sections[s_idx]
+        images = section['images']
+        
+        # Try next image in current section
+        if i_idx + 1 < len(images):
+             return images[i_idx + 1]['path']
+        
+        # Try first image of next section
+        if s_idx + 1 < len(self._sections):
+             next_section = self._sections[s_idx + 1]
+             if next_section['images']:
+                 return next_section['images'][0]['path']
+                 
+        return ""
+
+    @pyqtSlot(str, result=str)
+    def get_previous_image_path(self, current_path):
+        coords = self._find_path_coordinates(current_path)
+        if not coords:
+            return ""
+        
+        s_idx, i_idx = coords
+        
+        # Try previous image in current section
+        if i_idx - 1 >= 0:
+            section = self._sections[s_idx]
+            return section['images'][i_idx - 1]['path']
+            
+        # Try last image of previous section
+        if s_idx - 1 >= 0:
+            prev_section = self._sections[s_idx - 1]
+            if prev_section['images']:
+                return prev_section['images'][-1]['path']
+                
+        return ""
+
     @pyqtSlot(str, int)
     def add_person_to_image(self, file_path, person_id):
         if not file_path:

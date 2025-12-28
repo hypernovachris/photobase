@@ -8,14 +8,47 @@ Rectangle {
     anchors.fill: parent
     color: "#cc000000" // Semi-transparent black background
     visible: false
+    focus: true // Enable keyboard focus
     
-    // Trap mouse events
+    // Auto-hide controls
+    property bool controlsVisible: true
+    Timer {
+        id: hideControlsTimer
+        interval: 1000
+        repeat: false
+        onTriggered: root.controlsVisible = false
+    }
+    
+    function resetControlsTimer() {
+        root.controlsVisible = true
+        hideControlsTimer.restart()
+    }
+    
+    // Navigation Functions
+    function nextImage() {
+        var path = galleryModel.get_next_image_path(root.currentImagePath)
+        if (path) root.open(path)
+    }
+    
+    function prevImage() {
+        var path = galleryModel.get_previous_image_path(root.currentImagePath)
+        if (path) root.open(path)
+    }
+    
+    Keys.onRightPressed: nextImage()
+    Keys.onLeftPressed: prevImage()
+    
+    // Trap mouse events & Track Activity
     MouseArea {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.AllButtons
         onWheel: (wheel) => wheel.accepted = true
-        onClicked: (mouse) => mouse.accepted = true
+        onClicked: (mouse) => {
+            root.resetControlsTimer()
+            mouse.accepted = true
+        }
+        onPositionChanged: root.resetControlsTimer()
     }
     
     property string currentImagePath: ""
@@ -31,6 +64,8 @@ Rectangle {
         // Reset to info view
         rightStack.currentIndex = 0
         root.visible = true
+        root.forceActiveFocus() // Ensure focus for keyboard
+        root.resetControlsTimer()
     }
     
     function close() {
@@ -55,6 +90,84 @@ Rectangle {
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 autoTransform: true // Respect EXIF orientation
+            }
+            
+            // Left Arrow
+            Item {
+                width: 32
+                height: 32
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.leftMargin: 20
+                visible: root.controlsVisible
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 200 } }
+                
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 10
+                    color: "#80000000" // Semi-transparent black
+                    
+                    Image {
+                        source: "file:assets/icons/arrow-left.svg"
+                        anchors.centerIn: parent
+                        visible: false
+                    }
+                    
+                    MultiEffect {
+                        source: parent.children[0]
+                        anchors.fill: parent
+                        colorization: 1.0
+                        colorizationColor: "white"
+                    }
+                }
+                
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    onEntered: root.resetControlsTimer()
+                    onClicked: root.prevImage()
+                }
+            }
+            
+            // Right Arrow
+            Item {
+                width: 32
+                height: 32
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.rightMargin: 20
+                visible: root.controlsVisible
+                opacity: visible ? 1.0 : 0.0
+                Behavior on opacity { NumberAnimation { duration: 100 } }
+                
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 10
+                    color: "#80000000"
+                    
+                    Image {
+                        source: "file:assets/icons/arrow-right.svg"
+                        anchors.centerIn: parent
+                        visible: false
+                    }
+                    
+                    MultiEffect {
+                        source: parent.children[0]
+                        anchors.fill: parent
+                        colorization: 1.0
+                        colorizationColor: "white"
+                    }
+                }
+                
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    onEntered: root.resetControlsTimer()
+                    onClicked: root.nextImage()
+                }
             }
 
         }
