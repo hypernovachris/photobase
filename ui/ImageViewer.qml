@@ -98,7 +98,7 @@ Rectangle {
                     id: mainImage
                     width: parent.width
                     height: parent.height
-                    source: root.currentImagePath ? "file:///" + root.currentImagePath : ""
+                    source: root.currentImagePath ? galleryModel.get_image_url(root.currentImagePath) : ""
                     fillMode: Image.PreserveAspectFit
                     asynchronous: true
                     autoTransform: true 
@@ -833,7 +833,7 @@ Rectangle {
                                     // Case 2: Crop from Main Image
                                     Image {
                                         id: cropImg
-                                        source: (!faceWrapper.isManual && root.currentImagePath) ? "file:///" + root.currentImagePath : ""
+                                        source: (!faceWrapper.isManual && root.currentImagePath) ? galleryModel.get_image_url(root.currentImagePath) : ""
                                         autoTransform: true
                                         asynchronous: true
                                         fillMode: Image.Stretch 

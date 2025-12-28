@@ -4,11 +4,18 @@ import QtQuick.Layouts
 import QtQuick.Effects
 
 Item {
+    onVisibleChanged: {
+        if (visible) {
+            listView.checkVisibility()
+        }
+    }
     property string activeFilter: ""
     Connections {
         target: galleryModel
         function onFilterChanged(tagName) {
             activeFilter = tagName
+            listView.checkVisibility()
+            imageViewer.close()
         }
     }
 
@@ -61,7 +68,10 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: galleryModel.clear_tag_filter()
+                            onClicked: {
+                                galleryModel.clear_tag_filter()
+                                listView.checkVisibility()
+                            }
                         }
                     }
 
@@ -130,9 +140,18 @@ Item {
                 thumbnailGenerator.setMaxQueueSize(visibleItems)
             }
             
-            Component.onCompleted: updateQueueLimit()
-            onWidthChanged: updateQueueLimit()
-            onHeightChanged: updateQueueLimit()
+            Component.onCompleted: {
+                updateQueueLimit()
+                listView.checkVisibility()
+            }
+            onWidthChanged: {
+                updateQueueLimit()
+                listView.checkVisibility()
+            }
+            onHeightChanged: {
+                updateQueueLimit()
+                listView.checkVisibility()
+            }
             
             MouseArea {
                 anchors.fill: parent
@@ -346,6 +365,7 @@ Item {
         id: imageViewer
         z: 100 // Ensure it is on top
         onClosed: {
+            listView.checkVisibility()
             // cleanup
         }
     }

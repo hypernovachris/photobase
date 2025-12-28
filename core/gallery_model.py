@@ -400,6 +400,7 @@ class GalleryModel(QAbstractListModel):
         self._filter_tag_name = None
         self._filter_person_id = None
         self._filter_person_name = None
+        
         self.load_images()
         self.filterChanged.emit("")
         
@@ -518,6 +519,13 @@ class GalleryModel(QAbstractListModel):
             "tags": tags,
             "exifString": get_exif_string(file_path)
         }
+
+
+    @pyqtSlot(str, result=str)
+    def get_image_url(self, file_path):
+        if not file_path:
+            return ""
+        return QUrl.fromLocalFile(file_path).toString()
 
     @pyqtSlot(str, result=list)
     def get_people_in_image(self, file_path):

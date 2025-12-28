@@ -71,6 +71,14 @@ Dialog {
                     }
                 }
 
+                Text {
+                    text: "\"lens\" by Side Project, from Noun Project (CC BY 3.0). https://thenounproject.com/icon/lens-8154880/. Icon was modified to change the color to white and remove the text."
+                    font.pixelSize: 12
+                    color: "#666"
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                }
+
                 ColumnLayout {
                     Layout.fillWidth: true
                     Label {
