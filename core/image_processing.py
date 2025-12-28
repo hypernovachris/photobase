@@ -1,7 +1,7 @@
 import hashlib
 import os
 import time
-from PIL import Image
+from PIL import Image, ExifTags
 from core.database import db
 
 def create_and_save_square_thumbnail(image, save_path, size=(128, 128)):
@@ -106,3 +106,90 @@ class ImageScanner:
   def is_image(self, file_path):
     valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
     return any(file_path.lower().endswith(ext) for ext in valid_extensions)
+
+
+def get_exif_string(file_path):
+    """
+    Extracts basic EXIF data (Focal Length, ISO, Shutter Speed, Aperture) and returns a formatted string.
+    Format: "35mm, ISO 64, 1/200 s, ƒ/1.4"
+    Returns "Unavailable" if any of the data points are missing.
+    """
+    try:
+        if not os.path.exists(file_path):
+            return "Unavailable"
+
+        with Image.open(file_path) as img:
+            exif_data = img.getexif()
+            if not exif_data:
+                return "Unavailable"
+            
+            # Map tag IDs to names for easier access if needed, but we can look up specific IDs
+            # FocalLength: 37386
+            # ISOSpeedRatings: 34855
+            # ExposureTime: 33434
+            # FNumber: 33437
+            
+            # Extract values
+            focal_length = exif_data.get(37386)
+            iso = exif_data.get(34855)
+            exposure_time = exif_data.get(33434)
+            f_number = exif_data.get(33437)
+            
+            if focal_length is None or iso is None or exposure_time is None or f_number is None:
+                # Some cameras might store these in ExifOffset sub-IFD (34665)
+                # Let's check there if main tags are missing
+                sub_ifd = exif_data.get_ifd(34665)
+                if sub_ifd:
+                     focal_length = sub_ifd.get(37386, focal_length)
+                     iso = sub_ifd.get(34855, iso)
+                     exposure_time = sub_ifd.get(33434, exposure_time)
+                     f_number = sub_ifd.get(33437, f_number)
+
+            if focal_length is None or iso is None or exposure_time is None or f_number is None:
+                return "Unavailable"
+            
+            # Formatting
+            
+            # Focal Length (usually returns tuple (numerator, denominator) or float)
+            # PIL often returns these as IFDRational or convert to float? 
+            # Pillow 10+ might format differently. Let's handle float conversion safely.
+            
+            try:
+                fl_val = float(focal_length)
+                # If it's effectively an integer, show as integer
+                if fl_val.is_integer():
+                     fl_str = f"{int(fl_val)}mm"
+                else:
+                     fl_str = f"{fl_val:.1f}mm"
+            except (ValueError, TypeError):
+                 return "Unavailable" # Parsing failed
+                 
+            # ISO
+            # ISO is usually an integer
+            iso_str = f"ISO {iso}"
+            
+            # Exposure Time
+            # Usually a float. If < 1, display as fraction (1/x).
+            try:
+                exp_val = float(exposure_time)
+                if exp_val < 1:
+                     # approximate fraction
+                     denom = int(round(1.0 / exp_val))
+                     exp_str = f"1/{denom} s"
+                else:
+                     exp_str = f"{exp_val} s"
+            except (ValueError, TypeError):
+                 return "Unavailable"
+
+            # Aperture (FNumber)
+            try:
+                f_val = float(f_number)
+                f_str = f"ƒ/{f_val}"
+            except (ValueError, TypeError):
+                 return "Unavailable"
+            
+            return f"{fl_str}, {iso_str}, {exp_str}, {f_str}"
+
+    except Exception as e:
+        print(f"Error reading EXIF for {file_path}: {e}")
+        return "Unavailable"

@@ -457,6 +457,36 @@ Rectangle {
                                 color: theme.textColor
                             }
                         }
+
+                        // EXIF Data
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignLeft
+                            spacing: 10
+                            // Aperture icon
+                            Item {
+                                width: 20
+                                height: 20
+                                Image {
+                                    id: apertureIcon
+                                    source: "file:assets/icons/aperture.svg" 
+                                    sourceSize.width: 20
+                                    sourceSize.height: 20
+                                    visible: false  
+                                }
+                                MultiEffect {
+                                    source: apertureIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.textColor
+                                }
+                            }
+                            Text {
+                                text: root.currentImageDetails ? root.currentImageDetails.exifString : "Unavailable"
+                                font.pixelSize: 14
+                                color: theme.textColor
+                            }
+                        }
                         
                         // Tags
                         Flow {

@@ -504,6 +504,8 @@ class GalleryModel(QAbstractListModel):
         dt = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
         date_str = dt.strftime("%B %d, %Y, %I:%M %p")
         
+        from core.image_processing import get_exif_string
+        
         db.connect()
         img_id = db.get_image_id(file_path)
         tags = []
@@ -513,7 +515,8 @@ class GalleryModel(QAbstractListModel):
         
         return {
             "date": date_str,
-            "tags": tags
+            "tags": tags,
+            "exifString": get_exif_string(file_path)
         }
 
     @pyqtSlot(str, result=list)
