@@ -184,6 +184,8 @@ def get_exif_string(file_path):
             # Aperture (FNumber)
             try:
                 f_val = float(f_number)
+                # Round to 2 decimal places
+                f_val = round(f_val, 2)
                 f_str = f"ƒ/{f_val}"
             except (ValueError, TypeError):
                  return "Unavailable"

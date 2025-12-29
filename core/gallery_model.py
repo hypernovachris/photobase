@@ -400,7 +400,7 @@ class GalleryModel(QAbstractListModel):
         self._filter_tag_name = None
         self._filter_person_id = None
         self._filter_person_name = None
-        
+
         self.load_images()
         self.filterChanged.emit("")
         

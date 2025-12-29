@@ -6,7 +6,7 @@ import QtQuick.Effects
 Item {
     onVisibleChanged: {
         if (visible) {
-            listView.checkVisibility()
+            delayedVisibilityCheckTimer.restart()
         }
     }
     property string activeFilter: ""
@@ -70,7 +70,8 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 galleryModel.clear_tag_filter()
-                                listView.checkVisibility()
+                                // delayedVisibilityCheckTimer.restart()
+                                // no longer needed 
                             }
                         }
                     }
@@ -111,6 +112,13 @@ Item {
             }
             
             // Detect when scrolling stops
+            Timer {
+                id: delayedVisibilityCheckTimer
+                interval: 100
+                repeat: false
+                onTriggered: listView.checkVisibility()
+            }
+
             Timer {
                 id: scrollStopTimer
                 interval: 150

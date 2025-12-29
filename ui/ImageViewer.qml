@@ -486,6 +486,8 @@ Rectangle {
                                 font.italic: (text === "Unavailable")
                                 font.pixelSize: 14
                                 color: theme.textColor
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
                                 opacity: (text === "Unavailable") ? 0.7 : 1.0
                             }
                         }

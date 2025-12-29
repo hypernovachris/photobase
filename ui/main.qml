@@ -11,11 +11,22 @@ ApplicationWindow {
     title: "Photobase"
     color: theme.backgroundColor
 
+
+    property int previousTab: 0
+
     Connections {
         target: galleryModel
         function onFilterChanged(tagName) {
             if (tagName !== "") {
+                if (bar.currentIndex !== 0) {
+                    previousTab = bar.currentIndex
+                }
                 bar.currentIndex = 0
+            } else {
+                if (previousTab !== 0) {
+                    bar.currentIndex = previousTab
+                    previousTab = 0
+                }
             }
         }
     }
