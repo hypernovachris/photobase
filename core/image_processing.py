@@ -81,7 +81,11 @@ class ImageScanner:
                 # Calculate expected thumbnail path (hash of file path)
                 thumb_hash = hashlib.md5(file_path.encode()).hexdigest()
                 thumb_path = os.path.join(self.thumbnails_dir, f"{thumb_hash}.jpg")
-                files_to_update.append((file_path, mtime, thumb_path))
+                
+                # Extract Metadata
+                camera, lens = get_camera_lens_info(file_path)
+                
+                files_to_update.append((file_path, mtime, thumb_path, camera, lens))
                 
           except OSError:
              pass 
@@ -150,10 +154,6 @@ def get_exif_string(file_path):
             
             # Formatting
             
-            # Focal Length (usually returns tuple (numerator, denominator) or float)
-            # PIL often returns these as IFDRational or convert to float? 
-            # Pillow 10+ might format differently. Let's handle float conversion safely.
-            
             try:
                 fl_val = float(focal_length)
                 # If it's effectively an integer, show as integer
@@ -195,3 +195,52 @@ def get_exif_string(file_path):
     except Exception as e:
         print(f"Error reading EXIF for {file_path}: {e}")
         return "Unavailable"
+
+def get_camera_lens_info(file_path):
+    """
+    Extracts Camera Model and Lens Model from EXIF.
+    Returns (camera, lens) tuple.
+    """
+    try:
+        if not os.path.exists(file_path):
+            return None, None
+        
+        with Image.open(file_path) as img:
+            exif = img.getexif()
+            if not exif:
+                return None, None
+            
+            make = exif.get(271)
+            model = exif.get(272)
+            
+            camera = None
+            if model:
+                # Clean strings
+                model = str(model).replace('\x00', '').strip()
+                if make:
+                    make = str(make).replace('\x00', '').strip()
+                    if make and not model.lower().startswith(make.lower()):
+                         camera = f"{make} {model}"
+                    else:
+                         camera = model
+                else:
+                    camera = model
+            elif make:
+                camera = str(make).replace('\x00', '').strip()
+                
+            # Lens Model (42035 is LensMake, 42036 is LensModel)
+            lens = exif.get(42036)
+            
+            if not lens:
+                # Check ExifOffset (34665)
+                sub_ifd = exif.get_ifd(34665)
+                if sub_ifd:
+                    lens = sub_ifd.get(42036)
+            
+            if lens:
+                lens = str(lens).replace('\x00', '').strip()
+            
+            return camera, lens
+            
+    except Exception:
+        return None, None

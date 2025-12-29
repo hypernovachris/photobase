@@ -458,6 +458,74 @@ Rectangle {
                             }
                         }
 
+                        // Camera
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignLeft
+                            spacing: 10
+                            // Camera icon
+                            Item {
+                                width: 20
+                                height: 20
+                                Image {
+                                    id: cameraIcon
+                                    source: "file:assets/icons/camera.svg" 
+                                    sourceSize.width: 20
+                                    sourceSize.height: 20
+                                    visible: false  
+                                }
+                                MultiEffect {
+                                    source: cameraIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.textColor
+                                }
+                            }
+                            Text {
+                                text: root.currentImageDetails ? root.currentImageDetails.camera : "Unavailable"
+                                font.italic: (text === "Unavailable")
+                                font.pixelSize: 14
+                                color: theme.textColor
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                                opacity: (text === "Unavailable") ? 0.7 : 1.0
+                            }
+                        }
+
+                        // Lens
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignLeft
+                            spacing: 10
+                            // Lens icon
+                            Item {
+                                width: 20
+                                height: 27
+                                Image {
+                                    id: lensIcon
+                                    source: "file:assets/icons/noun-lens-8154880.svg" 
+                                    sourceSize.width: 22
+                                    sourceSize.height: 27
+                                    visible: false  
+                                }
+                                MultiEffect {
+                                    source: lensIcon
+                                    anchors.fill: parent
+                                    colorization: 1.0
+                                    colorizationColor: theme.textColor
+                                }
+                            }
+                            Text {
+                                text: root.currentImageDetails ? root.currentImageDetails.lens : "Unavailable"
+                                font.italic: (text === "Unavailable")
+                                font.pixelSize: 14
+                                color: theme.textColor
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                                opacity: (text === "Unavailable") ? 0.7 : 1.0
+                            }
+                        }
+                        
                         // EXIF Data
                         RowLayout {
                             Layout.fillWidth: true

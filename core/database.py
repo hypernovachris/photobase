@@ -29,14 +29,26 @@ class Database:
         file_path TEXT UNIQUE,
         last_modified INTEGER,
         thumbnail_path TEXT,
-        scanned_for_faces INTEGER DEFAULT 0
+        scanned_for_faces INTEGER DEFAULT 0,
+        camera TEXT,
+        lens TEXT
       )
     """)
     # Add column if it doesn't exist (migration for existing DBs)
-    try:
-        self.cursor.execute("ALTER TABLE images ADD COLUMN scanned_for_faces INTEGER DEFAULT 0")
-    except sqlite3.OperationalError:
-        pass # Column likely already exists
+    # try:
+    #     self.cursor.execute("ALTER TABLE images ADD COLUMN scanned_for_faces INTEGER DEFAULT 0")
+    # except sqlite3.OperationalError:
+    #     pass # Column likely already exists
+
+    # try:
+    #     self.cursor.execute("ALTER TABLE images ADD COLUMN camera TEXT")
+    # except sqlite3.OperationalError:
+    #     pass 
+        
+    # try:
+    #     self.cursor.execute("ALTER TABLE images ADD COLUMN lens TEXT")
+    # except sqlite3.OperationalError:
+    #     pass
 
     # Tagging support
     self.cursor.execute("""
@@ -65,22 +77,6 @@ class Database:
       )
     """)
     
-    # We are redefining faces table, so let's drop it if it exists to ensure schema match
-    # WARNING: This deletes existing face data as requested for clean slate
-    # But checking if columns exist is safer if we want to preserve? 
-    # User said: "recreate it to keep the DB clean".
-    
-    # Check if faces table has old schema or creating new. 
-    # Let's just create if not exists with NEW schema. 
-    # If it exists, we might need to drop it if it has old columns or just ignore them.
-    # To be safe and clean, let's DROP TABLE faces IF EXISTS just for this migration step.
-    # Ideally we'd do a migration check, but for this task "clean slate" is accepted.
-    
-    # self.cursor.execute("DROP TABLE IF EXISTS faces") 
-    # COMMENTED OUT: I shouldn't drop indiscriminately on every connect. 
-    # I will modify create_table to just have the right schema.
-    # If the user runs this on an existing DB, they will have the old table.
-    # I'll add a specific migration block.
 
     self.cursor.execute("""
       CREATE TABLE IF NOT EXISTS faces (
@@ -98,20 +94,20 @@ class Database:
     """)
     
     # Migration: Add UUID to people if missing
-    try:
-        self.cursor.execute("ALTER TABLE people ADD COLUMN uuid TEXT UNIQUE")
-        # Backfill UUIDs?
-        self.cursor.execute("SELECT id FROM people WHERE uuid IS NULL")
-        pids = self.cursor.fetchall()
-        for (pid,) in pids:
-            self.cursor.execute("UPDATE people SET uuid = ? WHERE id = ?", (str(uuid.uuid4()), pid))
-    except sqlite3.OperationalError:
-        pass
+    # try:
+    #     self.cursor.execute("ALTER TABLE people ADD COLUMN uuid TEXT UNIQUE")
+    #     # Backfill UUIDs?
+    #     self.cursor.execute("SELECT id FROM people WHERE uuid IS NULL")
+    #     pids = self.cursor.fetchall()
+    #     for (pid,) in pids:
+    #         self.cursor.execute("UPDATE people SET uuid = ? WHERE id = ?", (str(uuid.uuid4()), pid))
+    # except sqlite3.OperationalError:
+    #     pass
         
-    try:
-        self.cursor.execute("ALTER TABLE people ADD COLUMN cover_face_quality REAL DEFAULT 0")
-    except sqlite3.OperationalError:
-        pass
+    # try:
+    #     self.cursor.execute("ALTER TABLE people ADD COLUMN cover_face_quality REAL DEFAULT 0")
+    # except sqlite3.OperationalError:
+    #     pass
 
     self.connection.commit()
     self.cleanup_orphan_tags()
@@ -120,14 +116,16 @@ class Database:
     if self.connection:
       self.connection.close()
   
-  def add_or_update_image(self, file_path, last_modified, thumbnail_path):
+  def add_or_update_image(self, file_path, last_modified, thumbnail_path, camera=None, lens=None):
     self.cursor.execute("""
-      INSERT INTO images (file_path, last_modified, thumbnail_path)
-      VALUES (?, ?, ?)
+      INSERT INTO images (file_path, last_modified, thumbnail_path, camera, lens)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(file_path) DO UPDATE SET
         last_modified = excluded.last_modified,
-        thumbnail_path = excluded.thumbnail_path
-    """, (file_path, last_modified, thumbnail_path))
+        thumbnail_path = excluded.thumbnail_path,
+        camera = COALESCE(excluded.camera, images.camera),
+        lens = COALESCE(excluded.lens, images.lens)
+    """, (file_path, last_modified, thumbnail_path, camera, lens))
     # Commit removed for batching
   
   def commit(self):
@@ -138,6 +136,11 @@ class Database:
     # get all images from the database
     self.cursor.execute("SELECT * FROM images")
     return self.cursor.fetchall()
+
+  def get_image_metadata(self, file_path):
+      self.cursor.execute("SELECT camera, lens FROM images WHERE file_path = ?", (file_path,))
+      return self.cursor.fetchone()
+
   
   def get_all_image_paths_and_dates(self):
     self.cursor.execute("SELECT file_path, last_modified FROM images")

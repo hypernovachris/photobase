@@ -509,6 +509,15 @@ class GalleryModel(QAbstractListModel):
         
         db.connect()
         img_id = db.get_image_id(file_path)
+        
+        camera = "Unavailable"
+        lens = "Unavailable"
+        
+        meta = db.get_image_metadata(file_path)
+        if meta:
+            if meta[0]: camera = meta[0]
+            if meta[1]: lens = meta[1]
+
         tags = []
         if img_id:
             tags = [t[1] for t in db.get_tags_for_image(img_id)]
@@ -517,7 +526,9 @@ class GalleryModel(QAbstractListModel):
         return {
             "date": date_str,
             "tags": tags,
-            "exifString": get_exif_string(file_path)
+            "exifString": get_exif_string(file_path),
+            "camera": camera,
+            "lens": lens
         }
 
 
