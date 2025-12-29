@@ -37,6 +37,13 @@ Rectangle {
     
     Keys.onRightPressed: nextImage()
     Keys.onLeftPressed: prevImage()
+    Keys.onEscapePressed: {
+        if (rightStack.currentIndex === 1) {
+            rightStack.currentIndex = 0
+        } else {
+            root.close()
+        }
+    }
     
     // Trap mouse events & Track Activity
     MouseArea {

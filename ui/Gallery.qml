@@ -70,8 +70,6 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 galleryModel.clear_tag_filter()
-                                // delayedVisibilityCheckTimer.restart()
-                                // no longer needed 
                             }
                         }
                     }
@@ -106,12 +104,12 @@ Item {
             // Periodically check visibility while scrolling
             Timer {
                 id: scrollCheckTimer
-                interval: 50
+                interval: 200
                 repeat: true
                 onTriggered: listView.checkVisibility()
             }
             
-            // Detect when scrolling stops
+            
             Timer {
                 id: delayedVisibilityCheckTimer
                 interval: 100
@@ -119,6 +117,7 @@ Item {
                 onTriggered: listView.checkVisibility()
             }
 
+            // Detect when scrolling stops
             Timer {
                 id: scrollStopTimer
                 interval: 150
@@ -127,6 +126,7 @@ Item {
                     listView.isScrolling = false
                     scrollCheckTimer.stop()
                     listView.checkVisibility()
+                    delayedVisibilityCheckTimer.restart()
                 }
             }
             
@@ -154,11 +154,19 @@ Item {
             }
             onWidthChanged: {
                 updateQueueLimit()
-                listView.checkVisibility()
+                listView.isScrolling = true
+                if (!scrollCheckTimer.running) {
+                    scrollCheckTimer.start()
+                }
+                scrollStopTimer.restart()
             }
             onHeightChanged: {
                 updateQueueLimit()
-                listView.checkVisibility()
+                listView.isScrolling = true
+                if (!scrollCheckTimer.running) {
+                    scrollCheckTimer.start()
+                }
+                scrollStopTimer.restart()
             }
             
             MouseArea {
@@ -227,7 +235,9 @@ Item {
                                 
                                 Connections {
                                     target: listView
-                                    function onCheckVisibility() { calculateVisibility() }
+                                    function onCheckVisibility() { 
+                                        calculateVisibility()
+                                    }
                                 }
                                 
                                 Component.onCompleted: calculateVisibility()
