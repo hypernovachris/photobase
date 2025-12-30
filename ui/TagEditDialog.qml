@@ -50,9 +50,6 @@ Dialog {
                 if (isChecked) {
                     galleryModel.apply_tag_to_selection(tag)
                 } 
-                // When editing a selection, we DO NOT remove unchecked tags
-                // because we don't know if they were originally present on some items.
-                // This effectively disables "bulk remove" via this dialog, which is desired.
             }
         }
         tagsUpdated()
@@ -92,7 +89,6 @@ Dialog {
                         if (galleryModel.add_new_tag(name)) {
                             // Refresh
                             allTags = galleryModel.get_all_tags_list()
-                            // Also mark it as checked? Usually yes if I created it I want to apply it.
                             tagsState[name] = true 
                             tagList.model = allTags
                             newTagField.text = ""

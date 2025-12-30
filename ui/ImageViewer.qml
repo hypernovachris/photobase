@@ -827,7 +827,6 @@ Rectangle {
                             ColumnLayout {
                                 spacing: 0
                                 Text {
-                                    // Filename in All Caps and Smaller Font + "/"
                                     text: root.currentImagePath ? (root.currentImagePath.split('\\').pop().split('/').pop()).toUpperCase() + "/" : ""
                                     font.pixelSize: 14 // Smaller font
                                     font.capitalization: Font.AllUppercase

@@ -34,21 +34,6 @@ class Database:
         lens TEXT
       )
     """)
-    # Add column if it doesn't exist (migration for existing DBs)
-    # try:
-    #     self.cursor.execute("ALTER TABLE images ADD COLUMN scanned_for_faces INTEGER DEFAULT 0")
-    # except sqlite3.OperationalError:
-    #     pass # Column likely already exists
-
-    # try:
-    #     self.cursor.execute("ALTER TABLE images ADD COLUMN camera TEXT")
-    # except sqlite3.OperationalError:
-    #     pass 
-        
-    # try:
-    #     self.cursor.execute("ALTER TABLE images ADD COLUMN lens TEXT")
-    # except sqlite3.OperationalError:
-    #     pass
 
     # Tagging support
     self.cursor.execute("""
@@ -92,22 +77,6 @@ class Database:
         FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
       )
     """)
-    
-    # Migration: Add UUID to people if missing
-    # try:
-    #     self.cursor.execute("ALTER TABLE people ADD COLUMN uuid TEXT UNIQUE")
-    #     # Backfill UUIDs?
-    #     self.cursor.execute("SELECT id FROM people WHERE uuid IS NULL")
-    #     pids = self.cursor.fetchall()
-    #     for (pid,) in pids:
-    #         self.cursor.execute("UPDATE people SET uuid = ? WHERE id = ?", (str(uuid.uuid4()), pid))
-    # except sqlite3.OperationalError:
-    #     pass
-        
-    # try:
-    #     self.cursor.execute("ALTER TABLE people ADD COLUMN cover_face_quality REAL DEFAULT 0")
-    # except sqlite3.OperationalError:
-    #     pass
 
     self.connection.commit()
     self.cleanup_orphan_tags()
@@ -194,6 +163,8 @@ class Database:
 
         # Delete database entries
         self.cursor.execute(f"DELETE FROM images WHERE file_path IN ({placeholders})", tuple(chunk))
+        # TODO: should we also remove faces, tags?
+        # and make sure to remove any orphaned tags/people
     
     self.connection.commit()
 
@@ -386,6 +357,7 @@ class Database:
 
   def clear_faces_for_image(self, image_id):
       # Just delete DB entries, thumbnail cleanup is handled by Person logic largely or we don't care about faces table having thumbnails anymore
+      # TODO: UMM DO WE ACTUALLY?
       self.cursor.execute("DELETE FROM faces WHERE image_id = ?", (image_id,))
 
   def get_all_people_with_counts(self):

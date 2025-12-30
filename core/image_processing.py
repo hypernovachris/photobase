@@ -3,6 +3,9 @@ import os
 import time
 from PIL import Image, ExifTags
 from core.database import db
+import pillow_heif
+
+pillow_heif.register_heif_opener()
 
 def create_and_save_square_thumbnail(image, save_path, size=(128, 128)):
     """
@@ -108,7 +111,7 @@ class ImageScanner:
     # print(f"Scan completed in {time.time() - start_time:.2f} seconds.")
   
   def is_image(self, file_path):
-    valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp"]
+    valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".heic", ".heif"]
     return any(file_path.lower().endswith(ext) for ext in valid_extensions)
 
 

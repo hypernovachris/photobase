@@ -251,6 +251,7 @@ class GalleryModel(QAbstractListModel):
     def reveal_file(self, path):
         if os.path.exists(path):
             # Windows specific explorer selection
+            # TODO: cross platform
             import subprocess
             subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
 
@@ -536,6 +537,14 @@ class GalleryModel(QAbstractListModel):
     def get_image_url(self, file_path):
         if not file_path:
             return ""
+        
+        # Check for HEIC
+        lower_path = file_path.lower()
+        if lower_path.endswith('.heic') or lower_path.endswith('.heif'):
+            # Convert to forward slashes for URL consistency
+            clean_path = file_path.replace('\\', '/')
+            return f"image://heic/{clean_path}"
+            
         return QUrl.fromLocalFile(file_path).toString()
 
     @pyqtSlot(str, result=list)

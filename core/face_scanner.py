@@ -291,7 +291,7 @@ class FaceScanner(QObject):
             
         # print("Starting multithreaded background scanner...")
         
-        # DEBUG: Reduced to 1 thread to isolate crash cause
+        # No point in more than one thread b/c Python doesn't actually parallelize
         thread_count = 1
         
         for i in range(thread_count):
@@ -299,13 +299,7 @@ class FaceScanner(QObject):
             worker = FaceScannerWorker(self.signals, i)
             worker.moveToThread(thread)
             
-            thread.started.connect(worker.run)
-            # We don't connect signals.finished to thread.quit immediately because other threads might be running.
-            # Actually, standard behavior: running forever until stopped.
-            
-            # To clean up on stop:
-            # We'll handle cleanup in stop_scan
-            
+            thread.started.connect(worker.run)            
             self.threads.append(thread)
             self.workers.append(worker)
             thread.start()
@@ -317,9 +311,7 @@ class FaceScanner(QObject):
         # print("Stopping threads...")
         for worker in self.workers:
             worker.stop()
-        
-        # Wait for threads?
-        # Ideally we wait.
+    
         for thread in self.threads:
             thread.quit()
             thread.wait()

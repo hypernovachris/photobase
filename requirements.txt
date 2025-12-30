@@ -5,3 +5,4 @@ PyQt6_sip==13.10.0
 face_recognition
 numpy
 setuptools
+pillow-heif

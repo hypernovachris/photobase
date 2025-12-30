@@ -47,6 +47,10 @@ if __name__ == "__main__":
   app.gallery_model = GalleryModel(app)
   engine.rootContext().setContextProperty("galleryModel", app.gallery_model)
 
+  from core.heic_provider import HeicImageProvider
+  app.heic_provider = HeicImageProvider()
+  engine.addImageProvider("heic", app.heic_provider)
+
   app.settingsController = SettingsController(app)
   engine.rootContext().setContextProperty("settingsController", app.settingsController)
   
