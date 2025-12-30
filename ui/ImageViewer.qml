@@ -110,6 +110,12 @@ Rectangle {
                     asynchronous: true
                     autoTransform: true 
                     transformOrigin: Item.TopLeft
+                    
+                    onStatusChanged: {
+                        if (status === Image.Error) {
+                            console.error("ImageViewer: Failed to load image:", source)
+                        }
+                    }
                 }
                 
                 MouseArea {
@@ -338,24 +344,42 @@ Rectangle {
                         // Header: Filename + Close
                         RowLayout {
                             Layout.fillWidth: true
-                            
-                            Text {
-                                text: root.currentImagePath ? root.currentImagePath.split('\\').pop().split('/').pop() : ""
-                                font.pixelSize: 24
-                                font.bold: true
-                                color: theme.textColor
-                                elide: Text.ElideRight
-                                Layout.fillWidth: true
-                                
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        galleryModel.open_file(root.currentImagePath)
+
+                            RowLayout {
+                                spacing: 0
+                                Text {
+                                    // Filename without extension
+                                    text: root.currentImagePath ? root.currentImagePath.split('\\').pop().split('/').pop().split('.')[0] : ""
+                                    font.pixelSize: 24
+                                    font.bold: true
+                                    color: theme.textColor
+                                    elide: Text.ElideRight
+                                    Layout.alignment: Qt.AlignBaseline
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            galleryModel.open_file(root.currentImagePath)
+                                        }
+                                    }
+                                }
+                                Text {
+                                    // File extension in all caps
+                                    text: root.currentImagePath ? "." + root.currentImagePath.split('\\').pop().split('/').pop().split('.')[1].toUpperCase() : ""
+                                    font.pixelSize: 16
+                                    font.bold: true
+                                    color: theme.textColor
+                                    Layout.alignment: Qt.AlignBaseline
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            galleryModel.open_file(root.currentImagePath)
+                                        }
                                     }
                                 }
                             }
-
+                            
                             // Spacer
                             Item {
                                 Layout.fillWidth: true

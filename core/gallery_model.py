@@ -536,14 +536,17 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(str, result=str)
     def get_image_url(self, file_path):
         if not file_path:
+            print("No file path provided")
             return ""
         
         # Check for HEIC
         lower_path = file_path.lower()
         if lower_path.endswith('.heic') or lower_path.endswith('.heif'):
-            # Convert to forward slashes for URL consistency
-            clean_path = file_path.replace('\\', '/')
-            return f"image://heic/{clean_path}"
+            # Use QUrl to ensure proper encoding of special characters (like #)
+            url = QUrl.fromLocalFile(file_path)
+            url.setScheme("image")
+            url.setHost("heic")
+            return url.toString()
             
         return QUrl.fromLocalFile(file_path).toString()
 

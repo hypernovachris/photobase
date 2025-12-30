@@ -4,6 +4,7 @@ from PyQt6.QtCore import QSize
 import pillow_heif
 from PIL import Image
 import os
+from urllib.parse import unquote
 
 class HeicImageProvider(QQuickImageProvider):
     def __init__(self):
@@ -15,12 +16,19 @@ class HeicImageProvider(QQuickImageProvider):
         requestedSize: QSize (what the view wants)
         Returns: QImage or (QImage, QSize)
         """
-        file_path = id
+        print(f"HEIC Provider requested: {id}")
         
-        # Handle potential URL encoding or path issues if necessary
-        # Usually internal paths are fine. 
+        # Decode URL (e.g. %20 -> space, %23 -> #)
+        file_path = unquote(id)
+        
+        # Handle Windows paths originating from QUrl (strip leading / if /C:/...)
+        if os.name == 'nt' and file_path.startswith('/') and len(file_path) > 2 and file_path[2] == ':':
+            file_path = file_path[1:]
+            
+        # print(f"HEIC Provider resolved path: {file_path}")
         
         if not os.path.exists(file_path):
+             # print(f"HEIC Provider: File not found: {file_path}")
              # Return empty/null image
              return QImage(), QSize(0, 0)
 
@@ -28,24 +36,40 @@ class HeicImageProvider(QQuickImageProvider):
             # Open with Pillow (pillow-heif registered)
             pil_img = Image.open(file_path)
             
+            # Force load to catch decoding errors
+            pil_img.load()
+            
             # Ensure RGB
             if pil_img.mode != "RGB":
                 pil_img = pil_img.convert("RGB")
                 
             # Convert to QImage
             # 1. Get raw data
+            # bytes(pil_img.tobytes(...)) ensures we have a bytes object
             data = pil_img.tobytes("raw", "RGB")
             
             # 2. Create QImage
-            qimg = QImage(data, pil_img.width, pil_img.height, QImage.Format.Format_RGB888)
+            # QImage holds a pointer to 'data'. 
+            # We use the constructor that takes (data, width, height, bytesPerLine, format)
+            # PIL 'tobytes' ("raw", "RGB") is tightly packed, so bytesPerLine = width * 3.
+            # If we don't specify this, Qt might assume 32-bit alignment and read invalid memory.
+            stride = pil_img.width * 3
+            # print(f"HEIC Provider: creating QImage with w={pil_img.width}, h={pil_img.height}, stride={stride}")
             
-            # 3. We must keep a reference to the data if QImage doesn't copy it?
-            # QImage(bytes, ...) creates a view. We need to copy() to ensure it owns data
-            # or ensure 'data' persists. .copy() is safest for a return value.
+            qimg = QImage(data, pil_img.width, pil_img.height, stride, QImage.Format.Format_RGB888)
+            
+            # print("HEIC Provider: QImage created. Copying...")
+            
+            # 3. Deep copy to ensure QImage owns its own data and is detached from 'data' variable
             qimg = qimg.copy()
+            
+            # print("HEIC Provider: Copy complete.")
             
             return qimg, QSize(pil_img.width, pil_img.height)
 
         except Exception as e:
             print(f"Error loading HEIC {file_path}: {e}")
+            import traceback
+            traceback.print_exc()
+            # Return a valid empty image and size to prevent crashes in QML
             return QImage(), QSize(0, 0)
