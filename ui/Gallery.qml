@@ -364,7 +364,7 @@ Item {
             visible: activeFilter !== "" && listView.selectedPaths.length > 0
             height: visible ? implicitHeight : 0
             onTriggered: {
-                galleryModel.remove_tag_from_selection(activeFilter)
+                galleryModel.remove_selection_from_active_filter()
             }
         }
     }

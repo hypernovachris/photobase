@@ -412,5 +412,8 @@ class Database:
   def update_face_person_id(self, face_id, new_person_id):
       self.cursor.execute("UPDATE faces SET person_id = ? WHERE id = ?", (new_person_id, face_id))
 
+  def remove_person_from_image(self, image_id, person_id):
+      self.cursor.execute("UPDATE faces SET person_id = NULL WHERE image_id = ? AND person_id = ?", (image_id, person_id))
+
 
 db = Database()

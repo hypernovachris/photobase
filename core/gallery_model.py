@@ -317,8 +317,39 @@ class GalleryModel(QAbstractListModel):
             self.tagsChanged.emit()
         db.close()
 
+    @pyqtSlot()
+    def remove_selection_from_active_filter(self):
+        if not self._selected_paths:
+            return
+            
+        db.connect()
+
+        # Check if we are filtering by Person
+        if self._filter_person_id is not None:
+             for path in self._selected_paths:
+                 img_id = db.get_image_id(path)
+                 if img_id:
+                     db.remove_person_from_image(img_id, self._filter_person_id)
+             db.commit()
+             self.peopleChanged.emit()
+             # Refresh the view because items might no longer belong to the filter
+             self.load_images()
+
+        # Check if we are filtering by Tag
+        elif self._filter_tag_id is not None: 
+            for path in self._selected_paths:
+                img_id = db.get_image_id(path)
+                if img_id:
+                    db.remove_tag_from_image(img_id, self._filter_tag_id)
+            db.commit()
+            self.tagsChanged.emit()
+            self.load_images() # Refresh to remove from view
+            
+        db.close()
+
     @pyqtSlot(str)
     def remove_tag_from_selection(self, tag_name):
+        # Keep for backward compatibility or direct calls
         if not self._selected_paths:
             return
             
