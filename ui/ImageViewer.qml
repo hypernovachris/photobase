@@ -341,50 +341,63 @@ Rectangle {
                         anchors.margins: 20
                         spacing: 15
                         
-                        // Header: Filename + Close
+                        // Header: Filename + Extension +Close
                         RowLayout {
                             Layout.fillWidth: true
+                            spacing: 10
 
+                            // 1. NESTED LAYOUT (Holds Name + Ext + Spacer)
                             RowLayout {
                                 spacing: 0
+                                Layout.fillWidth: true 
+
+                                // A. FILENAME
                                 Text {
-                                    // Filename without extension
+                                    id: filenameText
                                     text: root.currentImagePath ? root.currentImagePath.split('\\').pop().split('/').pop().split('.')[0] : ""
                                     font.pixelSize: 24
                                     font.bold: true
                                     color: theme.textColor
+                                    
                                     elide: Text.ElideRight
                                     Layout.alignment: Qt.AlignBaseline
+                                    
+                                    Layout.fillWidth: true             // Enable dynamic sizing
+                                    Layout.minimumWidth: 0             // Allow shrinking (eliding)
+                                    Layout.maximumWidth: implicitWidth // Prevent growing (keeps extension attached)
+
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            galleryModel.open_file(root.currentImagePath)
-                                        }
+                                        onClicked: galleryModel.open_file(root.currentImagePath)
                                     }
                                 }
+
+                                // B. EXTENSION
                                 Text {
-                                    // File extension in all caps
                                     text: root.currentImagePath ? "." + root.currentImagePath.split('\\').pop().split('/').pop().split('.')[1].toUpperCase() : ""
                                     font.pixelSize: 16
                                     font.bold: true
                                     color: theme.textColor
                                     Layout.alignment: Qt.AlignBaseline
+                                    
+                                    // Default layout behavior is fine here (fixed width)
+
                                     MouseArea {
                                         anchors.fill: parent
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            galleryModel.open_file(root.currentImagePath)
-                                        }
+                                        onClicked: galleryModel.open_file(root.currentImagePath)
                                     }
                                 }
+
+                                // C. INTERNAL SPACER
+                                // This eats all the empty space on the right, pushing the texts to the left.
+                                Item {
+                                    Layout.fillWidth: true 
+                                }
                             }
-                            
-                            // Spacer
-                            Item {
-                                Layout.fillWidth: true
-                            }
-                            
+
+                            // 2. CLOSE BUTTON
                             Item {
                                 width: 30
                                 height: 30
@@ -399,7 +412,6 @@ Rectangle {
                                 }
 
                                 MultiEffect {
-                                    id: effect
                                     source: closeIcon
                                     anchors.fill: parent
                                     colorization: 1.0
@@ -408,11 +420,8 @@ Rectangle {
 
                                 MouseArea {
                                     anchors.fill: parent
-                                    // anchors.margins: -10 
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        root.close()
-                                    }
+                                    onClicked: root.close()
                                 }
                             }
                         }

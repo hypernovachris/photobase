@@ -16,7 +16,7 @@ class HeicImageProvider(QQuickImageProvider):
         requestedSize: QSize (what the view wants)
         Returns: QImage or (QImage, QSize)
         """
-        print(f"HEIC Provider requested: {id}")
+        # print(f"HEIC Provider requested: {id}")
         
         # Decode URL (e.g. %20 -> space, %23 -> #)
         file_path = unquote(id)
