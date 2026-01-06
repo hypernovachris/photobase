@@ -44,34 +44,13 @@ Item {
                     spacing: 10
 
                     // Back Button
-                    Item {
+                    IconButton {
                         width: 30
                         height: 30
+                        iconSize: 30
                         visible: activeFilter !== ""
-
-                        Image {
-                            id: backIcon
-                            source: "file:assets/icons/arrow-left.svg" 
-                            sourceSize.width: 30
-                            sourceSize.height: 30
-                            visible: false
-                        }
-
-                        MultiEffect {
-                            id: backIconEffect
-                            source: backIcon
-                            anchors.fill: parent
-                            colorization: 1.0
-                            colorizationColor: theme.textColor
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                galleryModel.clear_tag_filter()
-                            }
-                        }
+                        source: "file:assets/icons/arrow-left.svg"
+                        onClicked: galleryModel.clear_tag_filter()
                     }
 
                     Label {

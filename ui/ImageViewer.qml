@@ -211,29 +211,16 @@ Rectangle {
                     radius: 10
                     color: "#80000000"
                     
-                    Image {
-                        id: resetIcon
-                        source: "file:assets/icons/scan.svg"
-                        anchors.centerIn: parent
-                        visible: false
-                    }
-                    
-                    MultiEffect {
-                        anchors.margins: 6
-                        source: resetIcon
+                    IconButton {
                         anchors.fill: parent
-                        colorization: 1.0
-                        colorizationColor: "white"
-                    }
-                }
-                
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        mainImage.scale = 1.0
-                        mainImage.x = 0
-                        mainImage.y = 0
+                        source: "file:assets/icons/scan.svg"
+                        color: "white"
+                        hoverColor: "white" // Keep it simple or add hover effect if desired
+                        onClicked: {
+                            mainImage.scale = 1.0
+                            mainImage.x = 0
+                            mainImage.y = 0
+                        }
                     }
                 }
             }
@@ -254,27 +241,13 @@ Rectangle {
                     radius: 10
                     color: "#80000000" // Semi-transparent black
                     
-                    Image {
-                        source: "file:assets/icons/arrow-left.svg"
-                        anchors.centerIn: parent
-                        visible: false
-                    }
-                    
-                    MultiEffect {
-                        source: parent.children[0]
+                    IconButton {
                         anchors.fill: parent
-                        colorization: 1.0
-                        colorizationColor: "white"
-                        anchors.margins: 6
+                        source: "file:assets/icons/arrow-left.svg"
+                        color: "white" 
+                        onClicked: root.prevImage()
+                        onEntered: root.resetControlsTimer() // Keep the keep-alive logic
                     }
-                }
-                
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    hoverEnabled: true
-                    onEntered: root.resetControlsTimer()
-                    onClicked: root.prevImage()
                 }
             }
             
@@ -294,30 +267,15 @@ Rectangle {
                     radius: 10
                     color: "#80000000"
                     
-                    Image {
-                        source: "file:assets/icons/arrow-right.svg"
-                        anchors.centerIn: parent
-                        visible: false
-                    }
-                    
-                    MultiEffect {
-                        source: parent.children[0]
+                    IconButton {
                         anchors.fill: parent
-                        colorization: 1.0
-                        colorizationColor: "white"
-                        anchors.margins: 6
+                        source: "file:assets/icons/arrow-right.svg"
+                        color: "white"
+                        onClicked: root.nextImage()
+                        onEntered: root.resetControlsTimer()
                     }
-                }
-                
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    hoverEnabled: true
-                    onEntered: root.resetControlsTimer()
-                    onClicked: root.nextImage()
                 }
             }
-
         }
         
         // Right Column: Info
@@ -403,24 +361,10 @@ Rectangle {
                                 height: 30
                                 Layout.alignment: Qt.AlignVCenter
 
-                                Image {
-                                    id: closeIcon
-                                    source: "file:assets/icons/x.svg" 
-                                    sourceSize.width: 30
-                                    sourceSize.height: 30
-                                    visible: false
-                                }
-
-                                MultiEffect {
-                                    source: closeIcon
+                                IconButton {
                                     anchors.fill: parent
-                                    colorization: 1.0
-                                    colorizationColor: theme.textColor
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
+                                    source: "file:assets/icons/x.svg"
+                                    iconSize: 30
                                     onClicked: root.close()
                                 }
                             }
@@ -654,37 +598,18 @@ Rectangle {
                                             anchors.verticalCenter: parent.verticalCenter
                                         }
                                         
-                                        Item {
-                                            width: 16
-                                            height: 16
-                                            anchors.verticalCenter: parent.verticalCenter
-
-                                            Image {
-                                                id: removeIcon
-                                                source: "file:assets/icons/x.svg" 
-                                                sourceSize.width: 16
-                                                sourceSize.height: 16
-                                                visible: false
-                                            }
-
-                                            MultiEffect {
-                                                id: effect
-                                                source: removeIcon
-                                                anchors.fill: parent
-                                                colorization: 1.0
-                                                colorizationColor: theme.buttonTextColor
-                                            }
-
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                // anchors.margins: -10 
-                                                cursorShape: Qt.PointingHandCursor
+                                            IconButton {
+                                                width: 16
+                                                height: 16
+                                                iconSize: 16
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                source: "file:assets/icons/x.svg"
+                                                color: theme.buttonTextColor
                                                 onClicked: {
                                                     galleryModel.remove_tag_from_image_path(root.currentImagePath, modelData)
                                                     root.currentImageDetails = galleryModel.get_image_details(root.currentImagePath)
                                                 }
                                             }
-                                        }
                                     }
                                 }
                             }
@@ -698,25 +623,11 @@ Rectangle {
                                     height: 20
                                     visible: true
                                     anchors.verticalCenter: parent.verticalCenter
-                                    Image {
-                                        id: addIcon
-                                        source: "file:assets/icons/plus.svg" 
-                                        sourceSize.width: 20
-                                        sourceSize.height: 20
-                                        visible: false
-                                    }
-
-                                    MultiEffect {
-                                        id: addEffect
-                                        source: addIcon
+                                    
+                                    IconButton {
                                         anchors.fill: parent
-                                        colorization: 1.0
-                                        colorizationColor: theme.textColor
-                                    }
-
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
+                                        source: "file:assets/icons/plus.svg"
+                                        color: theme.textColor
                                         onClicked: {
                                             tagDialog.targetPath = root.currentImagePath
                                             tagDialog.isAddMode = true
@@ -876,35 +787,13 @@ Rectangle {
                                 }   
                             }
                             
-                            // Back Button
-                            Item {
+                            IconButton {
                                 width: 30
                                 height: 30
+                                iconSize: 30
                                 Layout.alignment: Qt.AlignTop | Qt.AlignRight
-
-                                Image {
-                                    id: backIcon
-                                    source: "file:assets/icons/arrow-left.svg" 
-                                    sourceSize.width: 30
-                                    sourceSize.height: 30
-                                    visible: false
-                                }
-
-                                MultiEffect {
-                                    id: backIconEffect
-                                    source: backIcon
-                                    anchors.fill: parent
-                                    colorization: 1.0
-                                    colorizationColor: theme.textColor
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        rightStack.currentIndex = 0
-                                    }
-                                }
+                                source: "file:assets/icons/arrow-left.svg"
+                                onClicked: rightStack.currentIndex = 0
                             }
                         }
                         
@@ -979,65 +868,24 @@ Rectangle {
                                     Layout.fillWidth: true
                                 }
                                 
-                                // Edit Icon (Pencil)
-                                Item {
+                                IconButton {
                                     width: 20
                                     height: 20
-                                    visible: true 
-                                    
-                                    Image {
-                                        id: editIcon
-                                        source: "file:assets/icons/pencil.svg"
-                                        sourceSize.width: 20
-                                        sourceSize.height: 20
-                                        visible: false
-                                    }
-                                    
-                                    MultiEffect {
-                                        source: editIcon
-                                        anchors.fill: parent
-                                        colorization: 1.0
-                                        colorizationColor: theme.textColor
-                                    }
-                                    
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            peopleView.editingFaceId = modelData.face_id
-                                            personSelectionDialog.title = "Replace Person"
-                                            personSelectionDialog.open()
-                                        }
+                                    source: "file:assets/icons/pencil.svg"
+                                    onClicked: {
+                                        peopleView.editingFaceId = modelData.face_id
+                                        personSelectionDialog.title = "Replace Person"
+                                        personSelectionDialog.open()
                                     }
                                 }
 
-                                // Delete Icon (X)
-                                Item {
+                                IconButton {
                                     width: 20
                                     height: 20
-                                    
-                                    Image {
-                                        id: delIcon
-                                        source: "file:assets/icons/x.svg"
-                                        sourceSize.width: 20
-                                        sourceSize.height: 20
-                                        visible: false
-                                    }
-                                    
-                                    MultiEffect {
-                                        source: delIcon
-                                        anchors.fill: parent
-                                        colorization: 1.0
-                                        colorizationColor: theme.textColor
-                                    }
-                                    
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            galleryModel.remove_face(modelData.face_id)
-                                            root.peopleList = galleryModel.get_people_in_image(root.currentImagePath)
-                                        }
+                                    source: "file:assets/icons/x.svg"
+                                    onClicked: {
+                                        galleryModel.remove_face(modelData.face_id)
+                                        root.peopleList = galleryModel.get_people_in_image(root.currentImagePath)
                                     }
                                 }
                             }
@@ -1098,7 +946,7 @@ Rectangle {
             }
         }
     }
-    
+
     TagEditDialog {
         id: tagDialog
         parent: Overlay.overlay
@@ -1112,7 +960,7 @@ Rectangle {
             root.currentImageDetails = galleryModel.get_image_details(root.currentImagePath)
         }
     }
-    
+        
     PersonSelectionDialog {
         id: personSelectionDialog
         parent: Overlay.overlay

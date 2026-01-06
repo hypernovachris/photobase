@@ -169,65 +169,25 @@ Item {
                                 // Layout.alignment: Qt.AlignRight
                                 
                                 // Add button
-                                Item {
+                                IconButton {
                                     width: 20
                                     height: 20
                                     Layout.alignment: Qt.AlignBottom
-
-                                    Image {
-                                        id: addIcon
-                                        source: "file:assets/icons/plus.svg" 
-                                        sourceSize.width: 20
-                                        sourceSize.height: 20
-                                        visible: false
-                                    }
-
-                                    MultiEffect {
-                                        id: addEffect
-                                        source: addIcon
-                                        anchors.fill: parent
-                                        colorization: 1.0
-                                        colorizationColor: theme.buttonTextColor
-                                    }
-
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            settingsController.addPath()
-                                        }
-                                    }
+                                    source: "file:assets/icons/plus.svg"
+                                    color: theme.buttonTextColor
+                                    onClicked: settingsController.addPath()
                                 }
 
                                 // Remove button
-                                Item {
+                                IconButton {
                                     width: 20
                                     height: 20
                                     Layout.alignment: Qt.AlignBottom
-
-                                    Image {
-                                        id: removeIcon
-                                        source: "file:assets/icons/minus.svg" 
-                                        sourceSize.width: 20
-                                        sourceSize.height: 20
-                                        visible: false
-                                    }
-
-                                    MultiEffect {
-                                        id: removeEffect
-                                        source: removeIcon
-                                        anchors.fill: parent
-                                        colorization: 1.0
-                                        colorizationColor: theme.buttonTextColor
-                                    }
-
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            if (pathsList.currentIndex >= 0) {
-                                                settingsController.removePath(pathsList.currentIndex)
-                                            }
+                                    source: "file:assets/icons/minus.svg"
+                                    color: theme.buttonTextColor
+                                    onClicked: {
+                                        if (pathsList.currentIndex >= 0) {
+                                            settingsController.removePath(pathsList.currentIndex)
                                         }
                                     }
                                 }
