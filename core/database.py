@@ -415,5 +415,69 @@ class Database:
   def remove_person_from_image(self, image_id, person_id):
       self.cursor.execute("UPDATE faces SET person_id = NULL WHERE image_id = ? AND person_id = ?", (image_id, person_id))
 
+  def get_filtered_months(self, tag_id=None, person_id=None):
+      """Returns a list of distinct month strings (YYYY-MM) based on filters."""
+      if tag_id is not None:
+          query = """
+              SELECT DISTINCT strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) AS month 
+              FROM images i
+              JOIN image_tags it ON i.id = it.image_id
+              WHERE it.tag_id = ?
+              ORDER BY month DESC
+          """
+          self.cursor.execute(query, (tag_id,))
+      elif person_id is not None:
+          query = """
+              SELECT DISTINCT strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) AS month 
+              FROM images i
+              JOIN faces f ON i.id = f.image_id
+              WHERE f.person_id = ?
+              ORDER BY month DESC
+          """
+          self.cursor.execute(query, (person_id,))
+      else:
+          query = """
+              SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month 
+              FROM images 
+              ORDER BY month DESC
+          """
+          self.cursor.execute(query)
+      
+      return [row[0] for row in self.cursor.fetchall()]
+
+  def get_filtered_images(self, month_str, tag_id=None, person_id=None):
+      """Returns a list of (file_path, thumbnail_path) tuples for a given month and filters."""
+      if tag_id is not None:
+          query = """
+              SELECT i.file_path, i.thumbnail_path 
+              FROM images i
+              JOIN image_tags it ON i.id = it.image_id
+              WHERE it.tag_id = ? 
+              AND strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) = ?
+              ORDER BY i.last_modified DESC
+          """
+          self.cursor.execute(query, (tag_id, month_str))
+      elif person_id is not None:
+          # Use DISTINCT on file_path to handle multiple faces of same person in one image
+          query = """
+              SELECT DISTINCT i.file_path, i.thumbnail_path 
+              FROM images i
+              JOIN faces f ON i.id = f.image_id
+              WHERE f.person_id = ? 
+              AND strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) = ?
+              ORDER BY i.last_modified DESC
+          """
+          self.cursor.execute(query, (person_id, month_str))
+      else:
+          query = """
+              SELECT file_path, thumbnail_path 
+              FROM images
+              WHERE strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?
+              ORDER BY last_modified DESC
+          """
+          self.cursor.execute(query, (month_str,))
+
+      return self.cursor.fetchall()
+
 
 db = Database()

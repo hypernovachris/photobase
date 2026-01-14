@@ -68,113 +68,25 @@ class GalleryModel(QAbstractListModel):
         self._sections = []
         db.connect()
         
-        # Base query parts
-        if self._filter_tag_id is not None:
-             # Filtered query
-             # 1. Get Distinct Months for images with tag
-            db.cursor.execute("""
-                SELECT DISTINCT strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) AS month 
-                FROM images i
-                JOIN image_tags it ON i.id = it.image_id
-                WHERE it.tag_id = ?
-                ORDER BY month DESC;
-            """, (self._filter_tag_id,))
-            month_rows = db.cursor.fetchall()
+        # 1. Get Distinct Months based on current filter
+        month_strings = db.get_filtered_months(self._filter_tag_id, self._filter_person_id)
+        
+        for month_str in month_strings:
+            # 2. Get Images for Month based on current filter
+            image_rows = db.get_filtered_images(month_str, self._filter_tag_id, self._filter_person_id)
             
-            for (month_str,) in month_rows:
-                # 2. Get Images for Month with tag
-                db.cursor.execute("""
-                    SELECT i.file_path, i.thumbnail_path 
-                    FROM images i
-                    JOIN image_tags it ON i.id = it.image_id
-                    WHERE it.tag_id = ? 
-                    AND strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) = ?
-                    ORDER BY i.last_modified DESC
-                """, (self._filter_tag_id, month_str))
-                
-                image_rows = db.cursor.fetchall()
-                image_list = []
-                for (file_path, thumb_path) in image_rows:
-                    abs_thumb_path = os.path.abspath(thumb_path)
-                    image_list.append({
-                        'path': file_path,
-                        'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
-                    })
-                    
-                self._sections.append({
-                    'month_text': month_numericstr_to_text(month_str),
-                    'images': image_list
+            image_list = []
+            for (file_path, thumb_path) in image_rows:
+                abs_thumb_path = os.path.abspath(thumb_path)
+                image_list.append({
+                    'path': file_path,
+                    'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
                 })
-
-        elif self._filter_person_id is not None:
-             # Filtered by Person
-            db.cursor.execute("""
-                SELECT DISTINCT strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) AS month 
-                FROM images i
-                JOIN faces f ON i.id = f.image_id
-                WHERE f.person_id = ?
-                ORDER BY month DESC;
-            """, (self._filter_person_id,))
-            month_rows = db.cursor.fetchall()
-            
-            for (month_str,) in month_rows:
-                db.cursor.execute("""
-                    SELECT i.file_path, i.thumbnail_path 
-                    FROM images i
-                    JOIN faces f ON i.id = f.image_id
-                    WHERE f.person_id = ? 
-                    AND strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) = ?
-                    ORDER BY i.last_modified DESC
-                """, (self._filter_person_id, month_str))
                 
-                image_rows = db.cursor.fetchall()
-                image_list = []
-                seen_paths = set()
-                
-                for (file_path, thumb_path) in image_rows:
-                    if file_path in seen_paths:
-                        continue
-                    seen_paths.add(file_path)
-                    
-                    abs_thumb_path = os.path.abspath(thumb_path)
-                    image_list.append({
-                        'path': file_path,
-                        'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
-                    })
-                    
-                self._sections.append({
-                    'month_text': month_numericstr_to_text(month_str),
-                    'images': image_list
-                })
-
-        else:
-            # Original Unfiltered Logic
-            # 1. Get Distinct Months
-            db.cursor.execute("SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month FROM images ORDER BY month DESC;")
-            month_rows = db.cursor.fetchall()
-            
-            for (month_str,) in month_rows:
-                # 2. Get Images for Month
-                db.cursor.execute("""
-                    SELECT file_path, thumbnail_path 
-                    FROM images
-                    WHERE strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?
-                    ORDER BY last_modified DESC
-                """, (month_str,))
-                
-                image_rows = db.cursor.fetchall()
-                image_list = []
-                for (file_path, thumb_path) in image_rows:
-                    abs_thumb_path = os.path.abspath(thumb_path)
-                    image_list.append({
-                        'path': file_path,
-                        'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
-                    })
-                    
-                self._sections.append({
-                    'month_text': month_numericstr_to_text(month_str),
-                    'images': image_list
-                })
+            self._sections.append({
+                'month_text': month_numericstr_to_text(month_str),
+                'images': image_list
+            })
             
         db.close()
         self.endResetModel()
