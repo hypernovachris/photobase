@@ -2,6 +2,7 @@ from PyQt6.QtCore import QAbstractListModel, Qt, QVariant, QModelIndex, QUrl, py
 from core.database import db
 from core.face_scanner import FaceScanner
 import os
+from PIL import Image
 
 def month_numericstr_to_text(numeric_month_str):
     if not numeric_month_str:
@@ -440,6 +441,33 @@ class GalleryModel(QAbstractListModel):
 
 
 
+
+    def _get_formatted_file_size(self, file_path):
+        try:
+            size_bytes = os.path.getsize(file_path)
+            units = ["B", "KB", "MB", "GB"]
+            size = float(size_bytes)
+            unit_index = 0
+            while size >= 1024 and unit_index < len(units) - 1:
+                size /= 1024
+                unit_index += 1
+            
+            if unit_index == 0:
+                return f"{int(size)} {units[unit_index]}"
+            else:
+                return f"{size:.1f} {units[unit_index]}"
+        except OSError:
+            return "Unavailable"
+
+    def _get_formatted_image_size(self, file_path):
+        try:
+            with Image.open(file_path) as img:
+                width, height = img.size
+                megapixels = (width * height) / 1_000_000
+                return f"{megapixels:.1f} MP ({width}x{height})"
+        except Exception:
+            return "Unavailable"
+
     @pyqtSlot(str, result=QVariant)
     def get_image_details(self, file_path):
         if not file_path or not os.path.exists(file_path):
@@ -472,7 +500,9 @@ class GalleryModel(QAbstractListModel):
             "tags": tags,
             "exifString": get_exif_string(file_path),
             "camera": camera,
-            "lens": lens
+            "lens": lens,
+            "fileSize": self._get_formatted_file_size(file_path),
+            "imageSize": self._get_formatted_image_size(file_path)
         }
 
 

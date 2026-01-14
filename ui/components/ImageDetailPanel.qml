@@ -69,6 +69,18 @@ Item {
                          text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.date : ""
                     }
 
+                    // File Size
+                    MetadataRow {
+                         iconSource: "file:assets/icons/hard-drive.svg"
+                         text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.fileSize : ""
+                    }
+
+                    // Image Size
+                    MetadataRow {
+                         iconSource: "file:assets/icons/size_icon.svg"
+                         text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.imageSize : ""
+                    }
+
                     // Camera
                     MetadataRow {
                         iconSource: "file:assets/icons/camera.svg"
