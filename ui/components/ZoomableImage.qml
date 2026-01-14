@@ -39,6 +39,7 @@ Item {
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 autoTransform: true 
+                mipmap: true 
                 transformOrigin: Item.TopLeft
                 
                 onStatusChanged: {
