@@ -3,5 +3,7 @@ __pycache__/
 *.pyc
 .DS_Store
 thumbnails/
-*.db
+photos.db
 config.txt
+test_env/
+test_thumbs/
