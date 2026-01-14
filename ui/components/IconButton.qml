@@ -11,6 +11,7 @@ Item {
     property color color: theme.textColor
     property color hoverColor: theme.textColor // Optional hover color
     property alias cursorShape: mouseArea.cursorShape
+    property bool clickable: true
     
     // Signals
     signal clicked(var mouse)
@@ -34,14 +35,15 @@ Item {
         source: icon
         anchors.fill: icon
         colorization: 1.0
-        colorizationColor: mouseArea.containsMouse ? root.hoverColor : root.color
+        colorizationColor: (root.clickable && mouseArea.containsMouse) ? root.hoverColor : root.color
     }
 
     MouseArea {
         id: mouseArea
         anchors.fill: parent
+        enabled: root.clickable
         hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
+        cursorShape: root.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
         onClicked: (mouse) => root.clicked(mouse)
         onEntered: root.entered()
         onExited: root.exited()

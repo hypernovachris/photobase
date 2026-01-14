@@ -243,18 +243,10 @@ Item {
                                 height: 16
                                 Layout.alignment: Qt.AlignVCenter
 
-                                Image {
-                                    id: linkIcon
+                                IconButton {
+                                    clickable: false
                                     source: "file:assets/icons/external-link-3px.svg"
-                                    sourceSize: Qt.size(16, 16)
-                                    visible: false
-                                }
-
-                                MultiEffect {
-                                    source: linkIcon
-                                    anchors.fill: parent
-                                    colorization: 1.0
-                                    colorizationColor: theme.textColor
+                                    iconSize: 16
                                 }
                             }
                         }

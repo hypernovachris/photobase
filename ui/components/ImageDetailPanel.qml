@@ -123,23 +123,11 @@ Item {
                         Layout.alignment: Qt.AlignLeft
                         spacing: 10
                         
-                        // Hard drive icon
-                        Item {
-                            width: 20
-                            height: 20
-                            Image {
-                                id: hardDriveIcon
-                                source: "file:assets/icons/hard-drive.svg" 
-                                sourceSize.width: 20
-                                sourceSize.height: 20
-                                visible: false  
-                            }
-                            MultiEffect {
-                                source: hardDriveIcon
-                                anchors.fill: parent
-                                colorization: 1.0
-                                colorizationColor: theme.textColor
-                            }
+                        // Folder icon
+                        IconButton {
+                            clickable: false
+                            source: "file:assets/icons/folder.svg"
+                            iconSize: 20
                         }
                         
                         Text {
@@ -165,22 +153,10 @@ Item {
                         Layout.alignment: Qt.AlignLeft
                         spacing: 10
                         // Clock icon
-                        Item {
-                            width: 20
-                            height: 20
-                            Image {
-                                id: clockIcon
-                                source: "file:assets/icons/clock.svg" 
-                                sourceSize.width: 20
-                                sourceSize.height: 20
-                                visible: false  
-                            }
-                            MultiEffect {
-                                source: clockIcon
-                                anchors.fill: parent
-                                colorization: 1.0
-                                colorizationColor: theme.textColor
-                            }
+                        IconButton {
+                            clickable: false
+                            source: "file:assets/icons/clock.svg"
+                            iconSize: 20
                         }
                         Text {
                             text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.date : ""
@@ -195,22 +171,10 @@ Item {
                         Layout.alignment: Qt.AlignLeft
                         spacing: 10
                         // Camera icon
-                        Item {
-                            width: 20
-                            height: 20
-                            Image {
-                                id: cameraIcon
-                                source: "file:assets/icons/camera.svg" 
-                                sourceSize.width: 20
-                                sourceSize.height: 20
-                                visible: false  
-                            }
-                            MultiEffect {
-                                source: cameraIcon
-                                anchors.fill: parent
-                                colorization: 1.0
-                                colorizationColor: theme.textColor
-                            }
+                        IconButton {
+                            clickable: false
+                            source: "file:assets/icons/camera.svg"
+                            iconSize: 20
                         }
                         Text {
                             text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.camera : "Unavailable"
@@ -229,22 +193,10 @@ Item {
                         Layout.alignment: Qt.AlignLeft
                         spacing: 10
                         // Lens icon
-                        Item {
-                            width: 20
-                            height: 27
-                            Image {
-                                id: lensIcon
-                                source: "file:assets/icons/noun-lens-8154880.svg" 
-                                sourceSize.width: 22
-                                sourceSize.height: 27
-                                visible: false  
-                            }
-                            MultiEffect {
-                                source: lensIcon
-                                anchors.fill: parent
-                                colorization: 1.0
-                                colorizationColor: theme.textColor
-                            }
+                        IconButton {
+                            clickable: false
+                            source: "file:assets/icons/noun-lens-8154880.svg"
+                            iconSize: 20
                         }
                         Text {
                             text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.lens : "Unavailable"
@@ -263,22 +215,10 @@ Item {
                         Layout.alignment: Qt.AlignLeft
                         spacing: 10
                         // Aperture icon
-                        Item {
-                            width: 20
-                            height: 20
-                            Image {
-                                id: apertureIcon
-                                source: "file:assets/icons/aperture.svg" 
-                                sourceSize.width: 20
-                                sourceSize.height: 20
-                                visible: false  
-                            }
-                            MultiEffect {
-                                source: apertureIcon
-                                anchors.fill: parent
-                                colorization: 1.0
-                                colorizationColor: theme.textColor
-                            }
+                        IconButton {
+                            clickable: false
+                            source: "file:assets/icons/aperture.svg"
+                            iconSize: 20
                         }
                         Text {
                             text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.exifString : "Unavailable"
@@ -298,26 +238,15 @@ Item {
                         readonly property int rowHeight: 30
 
                         // Tags icon
+
                         Item {
                             height: parent.rowHeight
                             width: 20
-                            Item {
-                                width: 20
-                                height: 20
+                            IconButton {
                                 anchors.centerIn: parent
-                                Image {
-                                    id: tagsIcon
-                                    source: "file:assets/icons/tag.svg" 
-                                    sourceSize.width: 20
-                                    sourceSize.height: 20
-                                    visible: false  
-                                }
-                                MultiEffect {
-                                    source: tagsIcon
-                                    anchors.fill: parent
-                                    colorization: 1.0
-                                    colorizationColor: theme.textColor
-                                }
+                                clickable: false
+                                source: "file:assets/icons/tag.svg"
+                                iconSize: 20
                             }
                         }
 
@@ -391,22 +320,10 @@ Item {
                         Layout.alignment: Qt.AlignLeft
                         spacing: 10
                         // Pin icon
-                        Item {
-                            height: 20
-                            width: 20
-                            Image {
-                                id: pinIcon
-                                source: "file:assets/icons/map-pin.svg"
-                                sourceSize.width: 20
-                                sourceSize.height: 20
-                                visible: false
-                            }
-                            MultiEffect {
-                                source: pinIcon
-                                anchors.fill: parent
-                                colorization: 1.0
-                                colorizationColor: theme.textColor
-                            }
+                        IconButton {
+                            clickable: false
+                            source: "file:assets/icons/map-pin.svg"
+                            iconSize: 20
                         }
                         Text {
                             text: "Unavailable"
@@ -424,22 +341,10 @@ Item {
                         spacing: 10
 
                         // People icon
-                        Item {
-                            height: 20
-                            width: 20
-                            Image {
-                                id: peopleIcon
-                                source: "file:assets/icons/scan-face.svg"
-                                sourceSize.width: 20
-                                sourceSize.height: 20
-                                visible: false
-                            }
-                            MultiEffect {
-                                source: peopleIcon
-                                anchors.fill: parent
-                                colorization: 1.0
-                                colorizationColor: theme.textColor
-                            }
+                        IconButton {
+                            clickable: false
+                            source: "file:assets/icons/scan-face.svg"
+                            iconSize: 20
                         }
 
                         // Label
@@ -465,24 +370,10 @@ Item {
                                 }
 
                                 // Link icon
-                                Item {
-                                    width: 16
-                                    height: 16
-                                    Layout.alignment: Qt.AlignVCenter
-
-                                    Image {
-                                        id: linkIcon
-                                        source: "file:assets/icons/external-link-3px.svg"
-                                        sourceSize: Qt.size(16, 16)
-                                        visible: false
-                                    }
-
-                                    MultiEffect {
-                                        source: linkIcon
-                                        anchors.fill: parent
-                                        colorization: 1.0
-                                        colorizationColor: theme.textColor
-                                    }
+                                IconButton {
+                                    clickable: false
+                                    source: "file:assets/icons/external-link-3px.svg"
+                                    iconSize: 16
                                 }
                             }
 
