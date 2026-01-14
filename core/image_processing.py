@@ -58,7 +58,7 @@ class ImageScanner:
     os.makedirs(self.thumbnails_dir, exist_ok=True)
 
   def scan_and_update_images(self, scan_paths):
-    existing_file_stats = self.db.get_all_image_paths_and_dates() # {path: last_modified}
+    existing_file_stats = self.db.images.get_all_image_paths_and_dates() # {path: last_modified}
     files_to_update = []
     found_files = set()
 
@@ -98,7 +98,7 @@ class ImageScanner:
         # print(f"Updating database for {len(files_to_update)} files...")
         batch_count = 0
         for entry in files_to_update:
-            self.db.add_or_update_image(*entry)
+            self.db.images.add_or_update_image(*entry)
             batch_count += 1
             if batch_count >= 1000:
                 self.db.commit()
@@ -106,7 +106,7 @@ class ImageScanner:
         self.db.commit()
 
     # 3. Cleanup missing files
-    self.db.remove_missing_files(found_files)
+    self.db.images.remove_missing_files(found_files)
     
     # print(f"Scan completed in {time.time() - start_time:.2f} seconds.")
   

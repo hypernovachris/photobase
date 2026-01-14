@@ -24,11 +24,15 @@ import sys
 # Mocking face_recognition module
 mock_fr = MagicMock()
 mock_fr.load_image_file.return_value = "dummy_image_data"
-# (top, right, bottom, left)
-mock_fr.face_locations.return_value = [(10, 50, 60, 20)] # One face per image
+# (top, right, bottom, left). Height = 200-10 = 190 > 150.
+mock_fr.face_locations.return_value = [(10, 200, 200, 10)] # One face per image
 # 128-d encoding
 mock_fr.face_encodings.return_value = [b'\x01'*128] # Dummy encoding
-mock_fr.face_encodings.return_value = [b'\x01'*128] # Dummy encoding
+mock_fr.face_landmarks.return_value = [{
+    'left_eye': [(10,10)], 
+    'right_eye': [(20,10)], 
+    'nose_bridge': [(15,15)]
+}]
 mock_fr.compare_faces.side_effect = lambda known, unknown, tolerance=0.6: [True] * len(known) if known else []
 
 
@@ -42,15 +46,23 @@ class TestPeopleBackend(unittest.TestCase):
         self.test_dir = "test_env"
         os.makedirs(self.test_dir, exist_ok=True)
         self.db_path = os.path.join(self.test_dir, "test_photos.db")
+        if os.path.exists(self.db_path):
+            try:
+                os.remove(self.db_path)
+            except:
+                pass
         self.db = Database(self.db_path)
         self.db.connect()
         
         # Add dummy image
         self.image_path = os.path.join(self.test_dir, "test.jpg")
-        with open(self.image_path, "wb") as f:
-            f.write(b"dummy image content")
+        from PIL import Image
+        img = Image.new('RGB', (100, 100), color = 'red')
+        img.save(self.image_path)
             
-        self.db.add_or_update_image(self.image_path, 123456, "thumb.jpg")
+        self.db.images.add_or_update_image(self.image_path, 123456, "thumb.jpg")
+        # Force reset scanned state in case DB persisted
+        self.db.cursor.execute("UPDATE images SET scanned_for_faces = 0")
         self.db.commit()
 
         # Qt App needed for Signals
@@ -70,30 +82,41 @@ class TestPeopleBackend(unittest.TestCase):
         # 1. Check Initial State
         self.db.cursor.execute("SELECT * FROM images")
         print("DEBUG IMAGES:", self.db.cursor.fetchall())
-        unscanned = self.db.get_unscanned_images()
+        unscanned = self.db.images.get_unscanned_images()
 
         self.assertEqual(len(unscanned), 1)
         
         # 2. Run Scanner
-        scanner = core.face_scanner.FaceScanner()
+        import threading
         
-        # We need to run the event loop to let thread work.
-        # But for unit test, we can just instantiate Worker directly and run run() to test logic synchronously.
-        # Testing full thread is harder.
-        
-        worker = core.face_scanner.FaceScannerWorker(scanner.signals)
-        
-        # Override DB path in worker (since it uses global 'db' import which points to 'photos.db')
-        # Wait, the worker imports 'db' from core.database.
-        # That global 'db' instance usually points to "photos.db".
-        # We need to redirect it.
-        core.face_scanner.db = self.db 
-        
-        worker.run()
-        
-        # Reconnect DB because worker closed it
-        self.db.connect()
+        # Patch Database in core.face_scanner to use test DB path
+        with unittest.mock.patch('core.face_scanner.Database', side_effect=lambda: Database(self.db_path)):
+            scanner = core.face_scanner.FaceScanner()
+            worker = core.face_scanner.FaceScannerWorker(scanner.signals, 0)
+            
+            t = threading.Thread(target=worker.run)
+            t.daemon = True
+            t.start()
+            
+            # Wait for completion
+            timeout = 5
+            start = time.time()
+            done = False
+            while time.time() - start < timeout:
+                # Check directly in DB if scanned
+                self.db.cursor.execute("SELECT scanned_for_faces FROM images WHERE file_path = ?", (self.image_path,))
+                res = self.db.cursor.fetchone()
+                if res and res[0] == 1:
+                    done = True
+                    break
+                time.sleep(0.1)
+                
+            worker.stop()
+            # Give it a moment to stop
+            t.join(timeout=1)
 
+            if not done:
+                self.fail("Timeout waiting for scanner")
         
         # 3. Check Results
         # Image should be scanned
@@ -102,7 +125,7 @@ class TestPeopleBackend(unittest.TestCase):
         self.assertEqual(scanned, 1)
         
         # Should have 1 person
-        people = self.db.get_all_people_with_counts()
+        people = self.db.people.get_all_people_with_counts()
         self.assertEqual(len(people), 1)
         
         # Should have 1 face

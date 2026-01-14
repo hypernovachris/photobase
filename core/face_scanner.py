@@ -58,7 +58,7 @@ class FaceScannerWorker(QObject):
             while self.is_running:
                 # Claim a batch
                 try:
-                    unscanned = self.db.claim_unscanned_images(limit=5)
+                    unscanned = self.db.images.claim_unscanned_images(limit=5)
                 except Exception as e:
                     print(f"Worker {self.worker_id} DB Error claiming: {e}")
                     time.sleep(1)
@@ -77,7 +77,7 @@ class FaceScannerWorker(QObject):
                 for image_id, file_path in unscanned:
 
                     try:
-                        known_faces = self.db.get_all_face_encodings()
+                        known_faces = self.db.people.get_all_face_encodings()
                         known_encodings = [np.frombuffer(enc, dtype=np.float64) for _, enc in known_faces]
                         known_ids = [pid for pid, _ in known_faces]
                     except Exception as e:
@@ -90,7 +90,7 @@ class FaceScannerWorker(QObject):
                         break
                     
                     if not os.path.exists(file_path):
-                         self.db.mark_image_scanned(image_id)
+                         self.db.images.mark_image_scanned(image_id)
                          self.db.commit()
                          continue
 
@@ -101,7 +101,7 @@ class FaceScannerWorker(QObject):
                             pil_original = ImageOps.exif_transpose(pil_original)
                         except Exception as e:
                              print(f"Worker {self.worker_id} Error loading image: {e}")
-                             self.db.mark_image_scanned(image_id)
+                             self.db.images.mark_image_scanned(image_id)
                              self.db.commit()
                              continue
 
@@ -132,7 +132,7 @@ class FaceScannerWorker(QObject):
                         # print(f"Worker {self.worker_id} Detection done. Found {len(face_locations_small)}.")
                         
                         if not face_locations_small:
-                            self.db.mark_image_scanned(image_id)
+                            self.db.images.mark_image_scanned(image_id)
                             self.db.commit()
                             continue
 
@@ -170,7 +170,7 @@ class FaceScannerWorker(QObject):
 
                             # If no known encodings, create a new person
                             if len(known_encodings) == 0:
-                                person_id = self.db.create_person()
+                                person_id = self.db.people.create_person()
                                 known_encodings.append(encoding)
                                 known_ids.append(person_id)
                             else:
@@ -187,15 +187,15 @@ class FaceScannerWorker(QObject):
                                     known_encodings.pop(closest_match_index)
                                     known_ids.pop(closest_match_index)
                                 else:
-                                    person_id = self.db.create_person()
+                                    person_id = self.db.people.create_person()
 
                             
                             # Check if this face is a better cover photo
-                            current_best = self.db.get_person_score(person_id)
+                            current_best = self.db.people.get_person_score(person_id)
                             
                             if score > current_best:
                                 try:
-                                    uuid = self.db.get_person_uuid(person_id)
+                                    uuid = self.db.people.get_person_uuid(person_id)
                                     if uuid:
                                         face_thumb_dir = os.path.join(thumbnails_dir, "faces")
                                         os.makedirs(face_thumb_dir, exist_ok=True)
@@ -214,20 +214,20 @@ class FaceScannerWorker(QObject):
                                         
                                         create_square_thumbnail(face_crop).save(face_thumb_path, "JPEG", quality=90)
                                         
-                                        self.db.update_person_cover_score(person_id, score)
+                                        self.db.people.update_person_cover_score(person_id, score)
                                 except Exception as e:
                                     print(f"Error updating cover for person {person_id}: {e}")
                             
                             # Save face (simplified)
                             x, y, w, h = left, top, right - left, bottom - top
-                            self.db.add_face(image_id, person_id, encoding, (x, y, w, h))
+                            self.db.people.add_face(image_id, person_id, encoding, (x, y, w, h))
                         
-                        self.db.mark_image_scanned(image_id)
+                        self.db.images.mark_image_scanned(image_id)
                         self.db.commit()
                         
                     except Exception as e:
                         print(f"Error scanning {file_path}: {e}")
-                        self.db.mark_image_scanned(image_id)
+                        self.db.images.mark_image_scanned(image_id)
                         self.db.commit()
 
                     processed_in_batch += 1
@@ -260,7 +260,7 @@ class FaceScanner(QObject):
         
         self.db = Database() # For initial count checking
         self.db.connect()
-        self.db.reset_stuck_scans() # Reset any -1 from previous bad runs
+        self.db.images.reset_stuck_scans() # Reset any -1 from previous bad runs
         
         self._unscanned_count = 0
         self.update_timer = QTimer(self)
@@ -275,7 +275,7 @@ class FaceScanner(QObject):
 
     def check_status(self):
         try:
-            count = self.db.get_unscanned_count()
+            count = self.db.images.get_unscanned_count()
             # Note: get_unscanned_count counts '0'. '-1' is effectively hidden/processing.
             if count != self._unscanned_count:
                 self._unscanned_count = count

@@ -26,42 +26,42 @@ def test_tagging_backend():
     assert db.cursor.fetchone() is not None, "Image_tags table not created"
     
     # 2. Insert Test Data
-    db.add_or_update_image("img1.jpg", 1000, "thumb1.jpg")
-    db.add_or_update_image("img2.jpg", 2000, "thumb2.jpg")
+    db.images.add_or_update_image("img1.jpg", 1000, "thumb1.jpg")
+    db.images.add_or_update_image("img2.jpg", 2000, "thumb2.jpg")
     db.commit()
     
-    img1_id = db.get_image_id("img1.jpg")
-    img2_id = db.get_image_id("img2.jpg")
+    img1_id = db.images.get_image_id("img1.jpg")
+    img2_id = db.images.get_image_id("img2.jpg")
     
     assert img1_id is not None
     assert img2_id is not None
     
     # 3. Test Tag Creation
-    tag1_id = db.get_or_create_tag("Vacation")
-    tag2_id = db.get_or_create_tag("Family")
+    tag1_id = db.tags.get_or_create_tag("Vacation")
+    tag2_id = db.tags.get_or_create_tag("Family")
     
     assert tag1_id is not None
     assert tag2_id is not None
     assert tag1_id != tag2_id
     
     # Test duplicate creation returns same ID
-    tag1_id_2 = db.get_or_create_tag("Vacation")
+    tag1_id_2 = db.tags.get_or_create_tag("Vacation")
     assert tag1_id == tag1_id_2
     
     # 4. Test Adding Tags to Images
-    assert db.add_tag_to_image(img1_id, tag1_id) == True # img1 -> Vacation
-    assert db.add_tag_to_image(img1_id, tag2_id) == True # img1 -> Family
-    assert db.add_tag_to_image(img2_id, tag1_id) == True # img2 -> Vacation
+    assert db.tags.add_tag_to_image(img1_id, tag1_id) == True # img1 -> Vacation
+    assert db.tags.add_tag_to_image(img1_id, tag2_id) == True # img1 -> Family
+    assert db.tags.add_tag_to_image(img2_id, tag1_id) == True # img2 -> Vacation
     
     db.commit()
     
     # 5. Test Retrieving Tags
-    tags_img1 = db.get_tags_for_image(img1_id)
+    tags_img1 = db.tags.get_tags_for_image(img1_id)
     tag_names_img1 = [t[1] for t in tags_img1]
     assert "Vacation" in tag_names_img1
     assert "Family" in tag_names_img1
     
-    tags_img2 = db.get_tags_for_image(img2_id)
+    tags_img2 = db.tags.get_tags_for_image(img2_id)
     tag_names_img2 = [t[1] for t in tags_img2]
     assert "Vacation" in tag_names_img2
     assert "Family" not in tag_names_img2
@@ -87,10 +87,10 @@ def test_tagging_backend():
     assert "img2.jpg" not in results
     
     # 8. Test Removal
-    db.remove_tag_from_image(img1_id, tag1_id)
+    db.tags.remove_tag_from_image(img1_id, tag1_id)
     db.commit()
     
-    tags_img1 = db.get_tags_for_image(img1_id)
+    tags_img1 = db.tags.get_tags_for_image(img1_id)
     tag_names_img1 = [t[1] for t in tags_img1]
     assert "Vacation" not in tag_names_img1
     assert "Family" in tag_names_img1
@@ -108,7 +108,7 @@ def test_tagging_backend():
     assert db.cursor.fetchone()[0] == 1, "Tag1 should still exist"
     
     # Remove tag1 from img2 (last usage)
-    db.remove_tag_from_image(img2_id, tag1_id)
+    db.tags.remove_tag_from_image(img2_id, tag1_id)
     db.commit()
     
     # Verify tag1 is GONE from tags table

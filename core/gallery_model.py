@@ -69,11 +69,11 @@ class GalleryModel(QAbstractListModel):
         db.connect()
         
         # 1. Get Distinct Months based on current filter
-        month_strings = db.get_filtered_months(self._filter_tag_id, self._filter_person_id)
+        month_strings = db.images.get_filtered_months(self._filter_tag_id, self._filter_person_id)
         
         for month_str in month_strings:
             # 2. Get Images for Month based on current filter
-            image_rows = db.get_filtered_images(month_str, self._filter_tag_id, self._filter_person_id)
+            image_rows = db.images.get_filtered_images(month_str, self._filter_tag_id, self._filter_person_id)
             
             image_list = []
             for (file_path, thumb_path) in image_rows:
@@ -206,7 +206,7 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(str, result=bool)
     def add_new_tag(self, tag_name):
         db.connect()
-        tag_id = db.get_or_create_tag(tag_name)
+        tag_id = db.tags.get_or_create_tag(tag_name)
         db.commit() # Ensure it is saved
         db.close()
         if tag_id:
@@ -219,12 +219,12 @@ class GalleryModel(QAbstractListModel):
             return
             
         db.connect()
-        tag_id = db.get_or_create_tag(tag_name)
+        tag_id = db.tags.get_or_create_tag(tag_name)
         if tag_id:
             for path in self._selected_paths:
-                img_id = db.get_image_id(path)
+                img_id = db.images.get_image_id(path)
                 if img_id:
-                    db.add_tag_to_image(img_id, tag_id)
+                    db.tags.add_tag_to_image(img_id, tag_id)
             db.commit()
             self.tagsChanged.emit()
         db.close()
@@ -239,9 +239,9 @@ class GalleryModel(QAbstractListModel):
         # Check if we are filtering by Person
         if self._filter_person_id is not None:
              for path in self._selected_paths:
-                 img_id = db.get_image_id(path)
+                 img_id = db.images.get_image_id(path)
                  if img_id:
-                     db.remove_person_from_image(img_id, self._filter_person_id)
+                     db.people.remove_person_from_image(img_id, self._filter_person_id)
              db.commit()
              self.peopleChanged.emit()
              # Refresh the view because items might no longer belong to the filter
@@ -250,9 +250,9 @@ class GalleryModel(QAbstractListModel):
         # Check if we are filtering by Tag
         elif self._filter_tag_id is not None: 
             for path in self._selected_paths:
-                img_id = db.get_image_id(path)
+                img_id = db.images.get_image_id(path)
                 if img_id:
-                    db.remove_tag_from_image(img_id, self._filter_tag_id)
+                    db.tags.remove_tag_from_image(img_id, self._filter_tag_id)
             db.commit()
             self.tagsChanged.emit()
             self.load_images() # Refresh to remove from view
@@ -267,13 +267,13 @@ class GalleryModel(QAbstractListModel):
             
         db.connect()
 
-        tag_id = db.get_or_create_tag(tag_name) 
+        tag_id = db.tags.get_or_create_tag(tag_name) 
         
         if tag_id:
             for path in self._selected_paths:
-                img_id = db.get_image_id(path)
+                img_id = db.images.get_image_id(path)
                 if img_id:
-                    db.remove_tag_from_image(img_id, tag_id)
+                    db.tags.remove_tag_from_image(img_id, tag_id)
             db.commit()
             self.tagsChanged.emit()
         db.close()
@@ -281,7 +281,7 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(result=list)
     def get_all_tags_list(self):
         db.connect()
-        tags = db.get_all_tags() # returns list of (id, name)
+        tags = db.tags.get_all_tags() # returns list of (id, name)
         db.close()
         return [t[1] for t in tags]
 
@@ -290,7 +290,7 @@ class GalleryModel(QAbstractListModel):
         """Returns a list of dictionaries for QML: name, count, thumbnail"""
         db.connect()
         # Returns [(name, count, cover_path, cover_thumb_path), ...]
-        rows = db.get_tags_with_metadata()
+        rows = db.tags.get_tags_with_metadata()
         db.close()
         
         result = []
@@ -351,7 +351,7 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(int, str)
     def rename_tag(self, tag_id, new_name):
         db.connect()
-        success = db.rename_tag(tag_id, new_name)
+        success = db.tags.rename_tag(tag_id, new_name)
         if success:
             db.commit()
             self.tagsChanged.emit()
@@ -382,7 +382,7 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(result=list)
     def get_people_model(self):
         db.connect()
-        rows = db.get_all_people_with_counts()
+        rows = db.people.get_all_people_with_counts()
         db.close()
         
         result = []
@@ -417,7 +417,7 @@ class GalleryModel(QAbstractListModel):
             pass # allow clearing?
             
         db.connect()
-        db.update_person_name(person_id, new_name)
+        db.people.update_person_name(person_id, new_name)
         db.commit()
         db.close()
         self.peopleChanged.emit()
@@ -430,7 +430,7 @@ class GalleryModel(QAbstractListModel):
         
         # Find name for display
         db.connect()
-        p = db.get_person(person_id)
+        p = db.people.get_person(person_id)
         db.close()
         name = p[1] if p and p[1] else "Person"
         self._filter_person_name = name
@@ -452,19 +452,19 @@ class GalleryModel(QAbstractListModel):
         from core.image_processing import get_exif_string
         
         db.connect()
-        img_id = db.get_image_id(file_path)
+        img_id = db.images.get_image_id(file_path)
         
         camera = "Unavailable"
         lens = "Unavailable"
         
-        meta = db.get_image_metadata(file_path)
+        meta = db.images.get_image_metadata(file_path)
         if meta:
             if meta[0]: camera = meta[0]
             if meta[1]: lens = meta[1]
 
         tags = []
         if img_id:
-            tags = [t[1] for t in db.get_tags_for_image(img_id)]
+            tags = [t[1] for t in db.tags.get_tags_for_image(img_id)]
         db.close()
         
         return {
@@ -499,12 +499,12 @@ class GalleryModel(QAbstractListModel):
             return []
             
         db.connect()
-        img_id = db.get_image_id(file_path)
+        img_id = db.images.get_image_id(file_path)
         if not img_id:
             db.close()
             return []
             
-        faces = db.get_faces_for_image(img_id) 
+        faces = db.people.get_faces_for_image(img_id) 
         # Returns [(id, name, x, y, w, h, person_id), ...]
         
         # We also need UUIDs for thumbnails if we want to show Person Thumbnail as fallback
@@ -515,7 +515,7 @@ class GalleryModel(QAbstractListModel):
             
             face_thumb_url = ""
             if pid:
-                person_uuid = db.get_person_uuid(pid)
+                person_uuid = db.people.get_person_uuid(pid)
                 if person_uuid:
                     thumb_path = os.path.abspath(os.path.join("thumbnails", "faces", f"{person_uuid}.jpg"))
                     if os.path.exists(thumb_path):
@@ -534,7 +534,7 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(int, int)
     def reassign_face(self, face_id, new_person_id):
         db.connect()
-        db.update_face_person_id(face_id, new_person_id)
+        db.people.update_face_person_id(face_id, new_person_id)
         db.commit()
         db.close()
         self.peopleChanged.emit()
@@ -588,11 +588,11 @@ class GalleryModel(QAbstractListModel):
             return
         
         db.connect()
-        img_id = db.get_image_id(file_path)
+        img_id = db.images.get_image_id(file_path)
         if img_id:
             # Add a 'manual' face with 0 coordinates
             # We don't have an encoding for this manual add, so None is appropriate.
-            db.add_face(img_id, person_id, b'', (0, 0, 0, 0))
+            db.people.add_face(img_id, person_id, b'', (0, 0, 0, 0))
             db.commit()
         db.close()
         self.peopleChanged.emit()
@@ -600,7 +600,7 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(int)
     def remove_face(self, face_id):
         db.connect()
-        db.remove_face(face_id)
+        db.people.remove_face(face_id)
         db.commit()
         db.close()
         self.peopleChanged.emit()
@@ -608,10 +608,10 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(str, str)
     def add_tag_to_image_path(self, file_path, tag_name):
         db.connect()
-        img_id = db.get_image_id(file_path)
-        tag_id = db.get_or_create_tag(tag_name)
+        img_id = db.images.get_image_id(file_path)
+        tag_id = db.tags.get_or_create_tag(tag_name)
         if img_id and tag_id:
-             db.add_tag_to_image(img_id, tag_id)
+             db.tags.add_tag_to_image(img_id, tag_id)
              db.commit()
              self.tagsChanged.emit()
         db.close()
@@ -619,13 +619,13 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(str, str)
     def remove_tag_from_image_path(self, file_path, tag_name):
         db.connect()
-        img_id = db.get_image_id(file_path)
+        img_id = db.images.get_image_id(file_path)
         # We need tag id
         # get_or_create is safe? Yes, if it exists we get ID. If not created, we get ID.
         # If we remove a tag that doesn't exist, nothing happens.
-        tag_id = db.get_or_create_tag(tag_name)
+        tag_id = db.tags.get_or_create_tag(tag_name)
         if img_id and tag_id:
-             db.remove_tag_from_image(img_id, tag_id)
+             db.tags.remove_tag_from_image(img_id, tag_id)
              db.commit()
              self.tagsChanged.emit()
         db.close()
