@@ -39,8 +39,8 @@ Rectangle {
     Keys.onRightPressed: nextImage()
     Keys.onLeftPressed: prevImage()
     Keys.onEscapePressed: {
-        if (rightStack.currentIndex === 1) {
-            rightStack.currentIndex = 0
+        if (detailPanel.navigateBack()) {
+            return
         } else {
             root.close()
         }

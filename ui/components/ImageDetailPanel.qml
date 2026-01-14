@@ -13,10 +13,20 @@ Item {
     property var peopleList: []
     signal closeRequested()
 
+    property bool isShowingDetails: rightStack.currentIndex === 0
+
     function resetToDetails() {
         if (rightStack) {
             rightStack.currentIndex = 0
         }
+    }
+    
+    function navigateBack() {
+        if (rightStack.currentIndex > 0) {
+            rightStack.currentIndex = 0
+            return true // Handled
+        }
+        return false // Not handled
     }
 
     onCurrentImagePathChanged: {
@@ -42,10 +52,16 @@ Item {
             Item {
                 id: detailView
                 
-                ColumnLayout {
+                ScrollView {
                     anchors.fill: parent
-                    anchors.margins: 20
-                    spacing: 15
+                    contentWidth: availableWidth
+
+                    ColumnLayout {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 20
+                        spacing: 15
                     
                     DetailHeader {
                         currentImagePath: detailPanelRoot.currentImagePath
@@ -128,7 +144,7 @@ Item {
                         onClicked: rightStack.currentIndex = 1
                     }
 
-                    Item { Layout.fillHeight: true }
+                    }
                 }
             }
             

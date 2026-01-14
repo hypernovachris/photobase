@@ -17,10 +17,16 @@ Item {
     signal editPersonRequested(int faceId)
     signal removeFaceRequested(int faceId)
 
-    ColumnLayout {
+    ScrollView {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 15
+        contentWidth: availableWidth
+
+        ColumnLayout {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 20
+            spacing: 15
         
         // Header
         RowLayout {
@@ -57,7 +63,8 @@ Item {
         
         ListView {
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            Layout.preferredHeight: contentHeight + 50
+            interactive: false
             model: peopleList
             clip: true
             spacing: 10
@@ -188,5 +195,6 @@ Item {
                 }
             }
         }
+    }
     }
 }
