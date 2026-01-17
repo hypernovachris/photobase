@@ -59,7 +59,9 @@ if __name__ == "__main__":
   
   app.faceScanner = FaceScanner(app)
   engine.rootContext().setContextProperty("faceScanner", app.faceScanner)
-  app.faceScanner.start_scan()
+  
+  if config.getboolean("General", "face_scan_enabled", fallback=False):
+      app.faceScanner.start_scan()
   
   app.aboutToQuit.connect(app.faceScanner.stop_scan)
   

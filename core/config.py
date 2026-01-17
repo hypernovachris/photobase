@@ -46,6 +46,9 @@ class ConfigManager:
   
   def get(self, section, key, fallback=None):
     return self.config.get(section, key, fallback=fallback)
+
+  def getboolean(self, section, key, fallback=None):
+    return self.config.getboolean(section, key, fallback=fallback)
   
   def set(self, section, key, value):
     if section not in self.config:

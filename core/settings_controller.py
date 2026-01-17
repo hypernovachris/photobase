@@ -8,11 +8,13 @@ import json
 class SettingsController(QObject):
     scanPathsChanged = pyqtSignal()
     themeChanged = pyqtSignal()
+    faceScanEnabledChanged = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._scan_paths = json.loads(config.get("General", "scan_paths", fallback="[]"))
         self._theme = config.get("General", "theme", fallback="System")
+        self._face_scan_enabled = config.getboolean("General", "face_scan_enabled", fallback=False)
 
     @pyqtProperty(list, notify=scanPathsChanged)
     def scanPaths(self):
@@ -37,6 +39,7 @@ class SettingsController(QObject):
     def applyChanges(self):
         config.set("General", "scan_paths", json.dumps(self._scan_paths))
         config.set("General", "theme", self._theme)
+        config.set("General", "face_scan_enabled", str(self._face_scan_enabled))
         config.save_config()
 
         app = QApplication.instance()
@@ -69,6 +72,13 @@ class SettingsController(QObject):
         for window in visible_windows:
             window.show()
 
+        # Update Face Scanner state
+        if self.parent() and hasattr(self.parent(), "faceScanner"):
+            if self._face_scan_enabled:
+                self.parent().faceScanner.start_scan()
+            else:
+                self.parent().faceScanner.stop_scan()
+
     @pyqtProperty(str, notify=themeChanged)
     def theme(self):
         return self._theme
@@ -86,5 +96,25 @@ class SettingsController(QObject):
         # Fallback to checking QGuiApplication.styleHints
         from PyQt6.QtGui import QGuiApplication
         return QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+
+    @pyqtProperty(bool, notify=faceScanEnabledChanged)
+    def faceScanEnabled(self):
+        return self._face_scan_enabled
+
+    @faceScanEnabled.setter
+    def faceScanEnabled(self, value):
+        if self._face_scan_enabled != value:
+            self._face_scan_enabled = value
+            self.faceScanEnabledChanged.emit()
+            
+            # Immediately save and apply
+            config.set("General", "face_scan_enabled", str(self._face_scan_enabled))
+            config.save_config()
+
+            if self.parent() and hasattr(self.parent(), "faceScanner"):
+                if self._face_scan_enabled:
+                    self.parent().faceScanner.start_scan()
+                else:
+                    self.parent().faceScanner.stop_scan()
 
 

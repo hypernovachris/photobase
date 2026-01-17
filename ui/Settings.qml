@@ -15,8 +15,10 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
+            contentHeight: settingsContent.height + 40
 
             ColumnLayout {
+                id: settingsContent
                 x: 20
                 y: 20
                 width: scrollView.availableWidth - 40
@@ -101,6 +103,47 @@ Item {
                                 border.color: theme.borderColor
                             }
                         }
+                    }
+                }
+
+                // Face Recognition Section
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    Label {
+                        text: "People"
+                        font.bold: true
+                        color: theme.textColor
+                        font.pixelSize: 18
+                    }
+
+                    RowLayout {
+                        Layout.alignment: Qt.AlignLeft
+                        spacing: 10
+                        Label {
+                            text: "Scan for faces"
+                            color: theme.textColor
+                            // Layout.fillWidth: true  <-- Removed to prevent pushing switch to right
+                        }
+
+                        Switch {   
+                            checked: settingsController.faceScanEnabled
+                            onCheckedChanged: settingsController.faceScanEnabled = checked
+                        }
+
+                        // Spacer
+                        Item {
+                            Layout.fillWidth: true
+                        }
+                    }
+                    
+                    Label {
+                        text: "When this is enabled, Photobase will scan your images in the background for faces. Please note that this feature is currently slow and inaccurate."
+                        color: theme.textColor
+                        font.pixelSize: 12
+                        opacity: 0.7
+                        wrapMode: Text.WordWrap
+                        Layout.fillWidth: true // Use Layout prop instead of explicit width
                     }
                 }
 

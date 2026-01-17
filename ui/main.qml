@@ -88,6 +88,7 @@ ApplicationWindow {
     
 
     footer: ToolBar {
+        visible: settingsController.faceScanEnabled
         height: 30
         background: Rectangle {
             color: theme.headerColor

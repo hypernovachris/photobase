@@ -95,6 +95,9 @@ class FaceScannerWorker(QObject):
                          continue
 
                     try:
+                        # Track which people we've already found in this image
+                        found_person_ids = set()
+
                         # 1. Load original image
                         try:
                             pil_original = Image.open(file_path)
@@ -122,7 +125,7 @@ class FaceScannerWorker(QObject):
                             detection_scale = math.sqrt(max_pixels / (original_w * original_h))
                             new_w = int(original_w * detection_scale)
                             new_h = int(original_h * detection_scale)
-                            pil_small = pil_original.resize((new_w, new_h))
+                            pil_small = pil_original.resize((new_w, new_h), resample=Image.Resampling.LANCZOS)
                             image_for_detection = np.array(pil_small)
                             image_for_detection = np.ascontiguousarray(image_for_detection, dtype=np.uint8)
                         
@@ -183,11 +186,15 @@ class FaceScannerWorker(QObject):
                             
                                 if is_same_person:
                                     person_id = known_ids[closest_match_index]
-                                    # remove the encoding from the list to avoid matching it again in the same image
-                                    known_encodings.pop(closest_match_index)
-                                    known_ids.pop(closest_match_index)
+                                    # We used to pop here, but that causes subsequent matches (e.g. reflections) 
+                                    # to be treated as NEW people. We want to keep the known encoding.
                                 else:
                                     person_id = self.db.people.create_person()
+                            
+                            # Prevent adding the same person multiple times per image
+                            if person_id in found_person_ids:
+                                continue
+                            found_person_ids.add(person_id)
 
                             
                             # Check if this face is a better cover photo
