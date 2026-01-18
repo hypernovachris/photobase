@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QAbstractListModel, Qt, QVariant, QModelIndex, QUrl, pyqtSlot, pyqtSignal
+from PyQt6.QtCore import QAbstractListModel, Qt, QVariant, QModelIndex, QUrl, pyqtSlot, pyqtSignal, pyqtProperty
 from core.database import db
 from core.face_scanner import FaceScanner
 import os
@@ -59,6 +59,12 @@ class GalleryModel(QAbstractListModel):
             
         return QVariant()
     
+    @pyqtSlot(int, result=int)
+    def getImageCountForMonth(self, monthIndex):
+        if 0 <= monthIndex < len(self._sections):
+            return len(self._sections[monthIndex]['images'])
+        return 0
+    
     @pyqtSlot()
     def refresh(self):
         self.load_images()
@@ -91,6 +97,13 @@ class GalleryModel(QAbstractListModel):
             
         db.close()
         self.endResetModel()
+        self.countChanged.emit()
+
+    countChanged = pyqtSignal()
+
+    @pyqtProperty(int, notify=countChanged)
+    def count(self):
+        return self.rowCount()
 
     # --- Selection Handling ---
 

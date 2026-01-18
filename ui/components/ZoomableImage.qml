@@ -14,11 +14,53 @@ Item {
     signal requestPrevImage()
     signal interactionOccurred()
 
+    property real fitScale: (mainImage.sourceSize.width > 0 && mainImage.sourceSize.height > 0) ? 
+                              Math.min(imageContainer.width / mainImage.sourceSize.width, imageContainer.height / mainImage.sourceSize.height) : 1.0
+    property real minLocalScale: Math.min(1.0, fitScale)
+    property real maxLocalScale: 4.0
+
+    property bool scaleToFit: true
+
+    onMinLocalScaleChanged: {
+        if (mainImage.scale < minLocalScale) {
+            mainImage.scale = minLocalScale
+        }
+        fixBounds()
+    }
+
+    onFitScaleChanged: {
+        if (scaleToFit) {
+            mainImage.scale = fitScale
+            fixBounds()
+        }
+    }
+
+    function fixBounds() {
+        var scaledWidth = mainImage.width * mainImage.scale
+        var scaledHeight = mainImage.height * mainImage.scale
+
+        // X Axis
+        if (scaledWidth < imageContainer.width) {
+            mainImage.x = (imageContainer.width - scaledWidth) / 2
+        } else {
+            if (mainImage.x > 0) mainImage.x = 0
+            if (mainImage.x < imageContainer.width - scaledWidth) mainImage.x = imageContainer.width - scaledWidth
+        }
+
+        // Y Axis
+        if (scaledHeight < imageContainer.height) {
+            mainImage.y = (imageContainer.height - scaledHeight) / 2
+        } else {
+            if (mainImage.y > 0) mainImage.y = 0
+            if (mainImage.y < imageContainer.height - scaledHeight) mainImage.y = imageContainer.height - scaledHeight
+        }
+    }
+
     function resetZoom() {
         if (mainImage) {
-            mainImage.scale = 1.0
-            mainImage.x = 0
-            mainImage.y = 0
+            zoomableImageRoot.scaleToFit = true
+            mainImage.scale = fitScale
+            fixBounds()
         }
     }
 
@@ -30,20 +72,28 @@ Item {
             id: imageContainer
             anchors.fill: parent
             clip: true
+            
+            onWidthChanged: zoomableImageRoot.fixBounds()
+            onHeightChanged: zoomableImageRoot.fixBounds()
 
             Image {
                 id: mainImage
-                width: parent.width
-                height: parent.height
+                width: sourceSize.width
+                height: sourceSize.height
+                onWidthChanged: zoomableImageRoot.fixBounds()
+                onHeightChanged: zoomableImageRoot.fixBounds()
+                // source set via binding
                 source: zoomableImageRoot.currentImagePath ? galleryModel.get_image_url(zoomableImageRoot.currentImagePath) : ""
-                fillMode: Image.PreserveAspectFit
+                // fillMode removed to use intrinsic size
                 asynchronous: true
                 autoTransform: true 
                 mipmap: true 
                 transformOrigin: Item.TopLeft
                 
                 onStatusChanged: {
-                    if (status === Image.Error) {
+                    if (status === Image.Ready) {
+                        zoomableImageRoot.resetZoom()
+                    } else if (status === Image.Error) {
                         console.error("ImageViewer: Failed to load image:", source)
                     }
                 }
@@ -59,6 +109,7 @@ Item {
                 property bool isDragging: false
 
                 onWheel: (wheel) => {
+                    zoomableImageRoot.scaleToFit = false
                     var zoomFactor = 1.1
                     var oldScale = mainImage.scale
                     var newScale = oldScale
@@ -69,11 +120,11 @@ Item {
                         newScale /= zoomFactor
                     }
                     
-                    // Limit minimum scale to 1.0
-                    if (newScale < 1.0) newScale = 1.0
+                    // Limit minimum scale
+                    if (newScale < zoomableImageRoot.minLocalScale) newScale = zoomableImageRoot.minLocalScale
 
-                    // Limit maximum scale to 100.0
-                    if (newScale > 100.0) newScale = 100.0
+                    // Limit maximum scale
+                    if (newScale > zoomableImageRoot.maxLocalScale) newScale = zoomableImageRoot.maxLocalScale
                     
                     // Calculate new position to zoom towards mouse
                     var mouseX = wheel.x
@@ -90,19 +141,19 @@ Item {
                     mainImage.x = newX
                     mainImage.y = newY
                     
-                    // Re-clamp if we hit 1.0 to re-center (optional logic, but keeps it clean)
-                    if (mainImage.scale <= 1.001) {
-                        mainImage.scale = 1.0
-                        mainImage.x = 0
-                        mainImage.y = 0
+                    // Re-clamp if we hit minLocalScale to re-center
+                    if (mainImage.scale <= zoomableImageRoot.minLocalScale + 0.001) {
+                        mainImage.scale = zoomableImageRoot.minLocalScale
                     }
+
+                    fixBounds()
 
                     // Prevent default scrolling
                     wheel.accepted = true
                 }
                 
                 onPressed: (mouse) => {
-                    if (mainImage.scale > 1.0 && mouse.button === Qt.LeftButton) {
+                    if (mainImage.scale > zoomableImageRoot.minLocalScale && mouse.button === Qt.LeftButton) {
                         lastMousePos = Qt.point(mouse.x, mouse.y)
                         isDragging = true
                     }
@@ -115,12 +166,14 @@ Item {
                 
                 onPositionChanged: (mouse) => {
                     zoomableImageRoot.interactionOccurred()
-                    if (isDragging && mainImage.scale > 1.0) {
+                    if (isDragging && mainImage.scale >= zoomableImageRoot.minLocalScale) {
                         var dx = mouse.x - lastMousePos.x
                         var dy = mouse.y - lastMousePos.y
                         
                         mainImage.x += dx
                         mainImage.y += dy
+                        
+                        fixBounds()
                         
                         lastMousePos = Qt.point(mouse.x, mouse.y)
                     }
@@ -128,29 +181,49 @@ Item {
             }
         }
 
-        // Reset Zoom (zoom to fit) Button
-        Item {
-            width: 32
+        // Bar of buttons at the top
+        // Bar of buttons at the top
+        Rectangle {
             height: 32
+            width: buttonRow.implicitWidth + 20
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.topMargin: 20
-            visible: mainImage.scale > 1.0
+            visible: zoomableImageRoot.controlsVisible
+            radius: 10
+            color: "#80000000"
             
-            Rectangle {
-                anchors.fill: parent
-                radius: 10
-                color: "#80000000"
-                
+            RowLayout {
+                id: buttonRow
+                anchors.centerIn: parent
+                spacing: 5
+                // Reset Zoom (zoom to fit) Button
                 IconButton {
-                    anchors.fill: parent
+                    Layout.alignment: Qt.AlignVCenter
                     source: "file:assets/icons/zoom_fit.svg"
                     color: "white"
-                    hoverColor: "white" // Keep it simple or add hover effect if desired
                     onClicked: {
+                        zoomableImageRoot.scaleToFit = true
+                        // "Fit" behavior: Zoom to fit the screen, but clamp to max zoom limit.
+                        // If fitScale > maxLocalScale, we cap at maxLocalScale.
+                        mainImage.scale = Math.min(zoomableImageRoot.fitScale, zoomableImageRoot.maxLocalScale)
+                        // If fitScale < minLocalScale (e.g. giant image), minLocalScale handles it? 
+                        // Actually minLocalScale = min(1.0, fitScale). So if fitScale is small, it matches.
+                        // We just want ensure we don't go below minLocalScale either?
+                        if (mainImage.scale < zoomableImageRoot.minLocalScale) mainImage.scale = zoomableImageRoot.minLocalScale
+                        
+                        fixBounds()
+                    }
+                }
+                // 1:1 zoom button
+                IconButton {
+                    Layout.alignment: Qt.AlignVCenter
+                    source: "file:assets/icons/zoom_1to1.svg"
+                    color: "white"
+                    onClicked: {
+                        zoomableImageRoot.scaleToFit = false
                         mainImage.scale = 1.0
-                        mainImage.x = 0
-                        mainImage.y = 0
+                        fixBounds()
                     }
                 }
             }
