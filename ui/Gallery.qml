@@ -176,6 +176,9 @@ Item {
                 // Explicit height: Header + (Rows * ImageHeight) + ((Rows-1) * Spacing)
                 height: headerHeight + (rows * imageSize) + (rows > 0 ? (rows - 1) * flowSpacing : 0)
 
+                // Calculate effective width of the grid content
+                property int gridWidth: (columns * imageSize) + (Math.max(0, columns - 1) * flowSpacing)
+
                 Column {
                     anchors.fill: parent
                     spacing: 10
@@ -186,12 +189,13 @@ Item {
                         color: theme.textColor
                         font.bold: true
                         font.pixelSize: 20
-                        leftPadding: 10
+                        anchors.left: parent.left
+                        anchors.leftMargin: (parent.width - gridWidth) / 2
                         verticalAlignment: Text.AlignVCenter
                     }
                     
                     Flow {
-                        width: parent.width - 20 // Padding
+                        width: gridWidth
                         anchors.horizontalCenter: parent.horizontalCenter
                         spacing: 10
                         

@@ -128,7 +128,7 @@ Item {
             }
         }
 
-        // Reset Zoom Button
+        // Reset Zoom (zoom to fit) Button
         Item {
             width: 32
             height: 32
@@ -144,7 +144,7 @@ Item {
                 
                 IconButton {
                     anchors.fill: parent
-                    source: "file:assets/icons/scan.svg"
+                    source: "file:assets/icons/zoom_fit.svg"
                     color: "white"
                     hoverColor: "white" // Keep it simple or add hover effect if desired
                     onClicked: {
