@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Effects
+import QtQuick.Window
 
 // Left Column: Image
 Item {
@@ -16,7 +17,7 @@ Item {
 
     property real fitScale: (mainImage.sourceSize.width > 0 && mainImage.sourceSize.height > 0) ? 
                               Math.min(imageContainer.width / mainImage.sourceSize.width, imageContainer.height / mainImage.sourceSize.height) : 1.0
-    property real minLocalScale: Math.min(1.0, fitScale)
+    property real minLocalScale: Math.min(1.0 / Screen.devicePixelRatio, fitScale)
     property real maxLocalScale: 4.0
 
     property bool scaleToFit: true
@@ -222,7 +223,7 @@ Item {
                     color: "white"
                     onClicked: {
                         zoomableImageRoot.scaleToFit = false
-                        mainImage.scale = 1.0
+                        mainImage.scale = 1.0 / Screen.devicePixelRatio
                         fixBounds()
                     }
                 }

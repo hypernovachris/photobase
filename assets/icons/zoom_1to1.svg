@@ -5,6 +5,6 @@
 <path d="M7 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 <path d="M7 8H7.5C7.9 8 8 8.33333 8 8.5V16" stroke="white" stroke-width="2" stroke-linecap="round"/>
 <path d="M15 8H15.5C15.9 8 16 8.33333 16 8.5V16" stroke="white" stroke-width="2" stroke-linecap="round"/>
-<circle cx="12" cy="10" r="0.5" fill="white"/>
-<circle cx="12" cy="14" r="0.5" fill="white"/>
+<rect x="11" y="13" width="2" height="2" fill="white"/>
+<rect x="11" y="9" width="2" height="2" fill="white"/>
 </svg>

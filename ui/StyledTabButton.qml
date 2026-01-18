@@ -12,7 +12,7 @@ TabButton {
             pixelSize: control.font.pixelSize,
             bold: control.checked
         })
-        opacity: enabled ? 1.0 : 0.3
+        opacity: control.checked ? 1.0 : 0.8
         color: theme.textColor 
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
