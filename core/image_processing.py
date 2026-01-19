@@ -3,6 +3,7 @@ import os
 import time
 from PIL import Image, ExifTags
 from core.database import db
+from PyQt6.QtCore import QDir
 import pillow_heif
 
 pillow_heif.register_heif_opener()
@@ -69,7 +70,7 @@ class ImageScanner:
     for scan_path in scan_paths:
       for root, _, files in os.walk(scan_path):
         for file in files:
-          file_path = os.path.join(root, file)
+          file_path = QDir.cleanPath(os.path.join(root, file))
           
           if not self.is_image(file_path):
             continue

@@ -228,7 +228,13 @@ class ImageRepository(BaseRepository):
                 sub_conds.append(f"file_path {ops} ?")
                 sub_params.append(f"%\\{val}\\%")
                 
-                combined = f"({' '+logic_op+' '.join(sub_conds)})"
+                # Correct join logic
+                combined = f"({' ' + logic_op + ' '.join(sub_conds)})" 
+                # Wait, ' '.join(sub_conds) joins them with spaces. 
+                # We want to join them with the operator.
+                # " OR ".join(sub_conds)
+                
+                combined = f"({(' ' + logic_op + ' ').join(sub_conds)})"
                 conditions.append(combined)
                 params.extend(sub_params)
                 
@@ -254,7 +260,7 @@ class ImageRepository(BaseRepository):
                 sub_conds.append(f"file_path {ops} ?")
                 sub_params.append(f"%\\{val}%")
                  
-                combined = f"({' '+logic_op+' '.join(sub_conds)})"
+                combined = f"({(' ' + logic_op + ' ').join(sub_conds)})"
                 conditions.append(combined)
                 params.extend(sub_params)
 

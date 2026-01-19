@@ -31,7 +31,7 @@ Item {
             storedValue = String(value.id)
         }
         
-        if (type === "date_between") {
+        if (type === "date_between" || type === "between") {
              // value is {start: "...", end: "..."}
              label = "Between " + value.start + " and " + value.end
              storedValue = JSON.stringify(value)
@@ -134,10 +134,10 @@ Item {
                             clip: true
                             
                             delegate: Rectangle {
-                                height: 28
+                                height: 30
                                 width: chipRow.implicitWidth + 20
                                 color: theme.buttonColor
-                                radius: 10
+                                radius: 15
                                 
                                 RowLayout {
                                     id: chipRow
@@ -238,15 +238,13 @@ Item {
                     // Button Factory
                     component FilterButton: Button {
                         // width: implicitWidth  // Let it size to content
-                        height: 40
+                        height: 30
                         leftPadding: 15
                         rightPadding: 15
                         
                         background: Rectangle {
-                            color: "transparent"
-                            border.color: theme.borderColor
-                            border.width: 1
-                            radius: 2
+                            color: theme.buttonColor
+                            radius: 15
                         }
                         contentItem: Text {
                             text: parent.text
