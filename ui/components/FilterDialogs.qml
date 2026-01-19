@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import "detail" // For PersonSelectionDialog
 Item {
     id: root
 
@@ -16,7 +15,6 @@ Item {
     function openDateBetweenDialog() { dateDialog.mode = "between"; dateDialog.open() }
     
     function openTagDialog() { tagDialog.open() }
-    function openPersonDialog() { personSelector.open() }
     
     function openCameraDialog() { 
         listSelectionDialog.title = "Select Camera Model"
@@ -148,16 +146,6 @@ Item {
                     tagDialog.close()
                 }
             }
-        }
-    }
-
-    // --- Person Selection Dialog (Reused) ---
-    PersonSelectionDialog {
-        id: personSelector
-        anchors.centerIn: Overlay.overlay
-        onPersonSelected: (personId) => {
-             root.filterAdded("person", personId)
-             personSelector.close()
         }
     }
 

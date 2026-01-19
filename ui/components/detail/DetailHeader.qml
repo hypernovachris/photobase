@@ -18,7 +18,12 @@ RowLayout {
         // A. FILENAME
         Text {
             id: filenameText
-            text: currentImagePath ? currentImagePath.split('\\').pop().split('/').pop().split('.')[0] : ""
+            text: {
+                if (!currentImagePath) return ""
+                var name = currentImagePath.split('\\').pop().split('/').pop()
+                var lastDot = name.lastIndexOf('.')
+                return lastDot > 0 ? name.substring(0, lastDot) : name
+            }
             font.pixelSize: 24
             font.bold: true
             color: theme.textColor
@@ -39,7 +44,7 @@ RowLayout {
 
         // B. EXTENSION
         Text {
-            text: currentImagePath ? "." + currentImagePath.split('\\').pop().split('/').pop().split('.')[1].toUpperCase() : ""
+            text: currentImagePath ? "." + currentImagePath.split('\\').pop().split('/').pop().split('.').pop().toUpperCase() : ""
             font.pixelSize: 16
             font.bold: true
             color: theme.textColor

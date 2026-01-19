@@ -76,9 +76,9 @@ class ImageRepository(BaseRepository):
 
             # Delete database entries
             self.cursor.execute(f"DELETE FROM images WHERE file_path IN ({placeholders})", tuple(chunk))
-            # TODO: should we also remove faces, tags?
-            # YES WE ABSOLUTELY MUST
-            # and make sure to remove any orphaned tags/people
+            # TODO: should we also remove tags?
+            # YES WE ABSOLUTELY MUST, make sure to remove any orphaned tags
+            # Make sure we're already doing this
         
         self.connection.commit()
 
@@ -86,64 +86,7 @@ class ImageRepository(BaseRepository):
         self.cursor.execute("SELECT id FROM images WHERE file_path = ?", (file_path,))
         result = self.cursor.fetchone()
         return result[0] if result else None
-
-    # --- Scanning & Status ---
-
-    def get_unscanned_images(self, limit=None):
-        if limit:
-            self.cursor.execute("SELECT id, file_path FROM images WHERE scanned_for_faces = 0 LIMIT ?", (limit,))
-        else:
-            self.cursor.execute("SELECT id, file_path FROM images WHERE scanned_for_faces = 0")
-        return self.cursor.fetchall()
-        
-    def claim_unscanned_images(self, limit=10):
-        """
-        Atomically gets a batch of unscanned images and marks them as in-progress (-1).
-        Returns list of (id, file_path).
-        """
-        try:
-            # We need an immediate transaction to prevent race conditions
-            self.cursor.execute("BEGIN IMMEDIATE")
-            
-            self.cursor.execute("SELECT id, file_path FROM images WHERE scanned_for_faces = 0 LIMIT ?", (limit,))
-            rows = self.cursor.fetchall()
-            
-            if rows:
-                ids = [r[0] for r in rows]
-                placeholders = ",".join("?" for _ in ids)
-                self.cursor.execute(f"UPDATE images SET scanned_for_faces = -1 WHERE id IN ({placeholders})", tuple(ids))
-                self.connection.commit()
-            else:
-                self.connection.rollback() # Nothing to do
-                
-            return rows
-        except Exception as e:
-            print(f"Error claiming batch: {e}")
-            try:
-                self.connection.rollback()
-            except:
-                pass
-            return []
-            
-    def reset_stuck_scans(self):
-        """Resets any scans marked as in-progress (-1) back to 0 on startup."""
-        try:
-            self.cursor.execute("UPDATE images SET scanned_for_faces = 0 WHERE scanned_for_faces = -1")
-            self.connection.commit()
-        except sqlite3.OperationalError:
-            pass # Table might not exist yet
-
-    def get_unscanned_count(self):
-        try:
-            self.cursor.execute("SELECT COUNT(*) FROM images WHERE scanned_for_faces = 0")
-            return self.cursor.fetchone()[0]
-        except sqlite3.OperationalError:
-            return 0
-
-    def mark_image_scanned(self, image_id):
-        self.cursor.execute("UPDATE images SET scanned_for_faces = 1 WHERE id = ?", (image_id,))
-        # Commit should be handled by caller usually, but for safety in long loops we might commit periodically.
-
+    
     # --- Filtering ---
 
     def _parse_date(self, date_str):
@@ -187,17 +130,6 @@ class ImageRepository(BaseRepository):
                 add_subquery_condition(
                     "SELECT image_id FROM image_tags JOIN tags ON image_tags.tag_id = tags.id WHERE tags.name = ?",
                     [val]
-                )
-            elif ftype == 'person':
-                # val is person_id, might be string now
-                try:
-                    pid = int(val)
-                except:
-                    pid = -1
-                    
-                add_subquery_condition(
-                    "SELECT image_id FROM faces WHERE person_id = ?",
-                    [pid]
                 )
             elif ftype == 'camera':
                 # Handle NULLs for negation

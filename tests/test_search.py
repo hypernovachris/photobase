@@ -30,13 +30,6 @@ class TestSearchQueryBuilder(unittest.TestCase):
         self.assertIn("NOT IN", sql)
         self.assertEqual(params, ['Holiday'])
 
-    def test_person_filter(self):
-        filters = [{'type': 'person', 'value': 5}]
-        sql, params = self.repo._build_filter_conditions(filters)
-        self.assertIn("faces", sql)
-        self.assertIn("person_id = ?", sql)
-        self.assertEqual(params, [5])
-
     def test_complex_and(self):
         filters = [
             {'type': 'tag', 'value': 'A'},

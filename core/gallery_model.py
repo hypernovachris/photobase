@@ -1,6 +1,5 @@
 from PyQt6.QtCore import QAbstractListModel, Qt, QVariant, QModelIndex, QUrl, pyqtSlot, pyqtSignal, pyqtProperty
 from core.database import db
-from core.face_scanner import FaceScanner
 import os
 from PIL import Image
 
@@ -28,10 +27,6 @@ class GalleryModel(QAbstractListModel):
         self._active_filters = []
         # Support legacy properties for active filter display
         self._active_filter_name = ""
-
-        self.face_scanner = FaceScanner()
-        # self.face_scanner.signals.progress.connect(self.on_scan_progress)
-        self.face_scanner.signals.finished.connect(self.on_scan_finished)
 
         self.load_images()
 
@@ -252,16 +247,8 @@ class GalleryModel(QAbstractListModel):
         for f in self._active_filters:
              ftype = f.get('type')
              val = f.get('value')
-             
-             if ftype == 'person':
-                 # val is person_id
-                 for path in self._selected_paths:
-                     img_id = db.images.get_image_id(path)
-                     if img_id:
-                         db.people.remove_person_from_image(img_id, val)
-                 self.peopleChanged.emit()
                  
-             elif ftype == 'tag':
+             if ftype == 'tag':
                  # val is tag_name
                  # need tag_id
                  tag_id = db.tags.get_or_create_tag(val)
@@ -384,81 +371,7 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(result=str)
     def get_active_filter(self):
         return self._active_filter_name
-
-    # --- People & Face Scanner ---
     
-    # scanProgress = pyqtSignal(int, int, arguments=['processed', 'total'])
-    scanFinished = pyqtSignal()
-    peopleChanged = pyqtSignal()
-
-    @pyqtSlot()
-    def start_face_scan(self):
-        self.face_scanner.start_scan()
-
-    def on_scan_finished(self):
-        self.scanFinished.emit()
-        self.peopleChanged.emit() # Refresh people list
-
-    @pyqtSlot(result=list)
-    def get_people_model(self):
-        db.connect()
-        rows = db.people.get_all_people_with_counts()
-        db.close()
-        
-        result = []
-        # rows: id, name, count, face_id, file_path, x, y, w, h, uuid
-        for row in rows:
-            pid, name, count, fid, file_path, x, y, w, h, person_uuid = row
-            
-            image_url = ""
-            if file_path and os.path.exists(file_path):
-                image_url = QUrl.fromLocalFile(os.path.abspath(file_path)).toString()
-
-            face_thumb_url = ""
-            if person_uuid:
-                thumb_path = os.path.abspath(os.path.join("thumbnails", "faces", f"{person_uuid}.jpg"))
-                if os.path.exists(thumb_path):
-                    face_thumb_url = QUrl.fromLocalFile(thumb_path).toString()
-
-            result.append({
-                "id": pid,
-                "name": name if name else "",
-                "count": count,
-                "imagePath": image_url,
-                "faceThumbnail": face_thumb_url,
-                "faceRect": {"x": x, "y": y, "w": w, "h": h}
-            })
-        return result
-
-    @pyqtSlot(int, str)
-    def rename_person(self, person_id, new_name):
-        new_name = new_name.strip()
-        if not new_name:
-            pass # allow clearing?
-            
-        db.connect()
-        db.people.update_person_name(person_id, new_name)
-        db.commit()
-        db.close()
-        self.peopleChanged.emit()
-
-    @pyqtSlot(int)
-    def set_person_filter(self, person_id):
-        # Find name for display
-        db.connect()
-        p = db.people.get_person(person_id)
-        db.close()
-        name = p[1] if p and p[1] else "Person"
-
-        self._active_filters = [{'type': 'person', 'value': person_id}]
-        self._active_filter_name = name
-
-        self.load_images()
-        self.filterChanged.emit(name)
-
-
-
-
     def _get_formatted_file_size(self, file_path):
         try:
             size_bytes = os.path.getsize(file_path)
@@ -540,52 +453,6 @@ class GalleryModel(QAbstractListModel):
             
         return QUrl.fromLocalFile(file_path).toString()
 
-    @pyqtSlot(str, result=list)
-    def get_people_in_image(self, file_path):
-        if not file_path:
-            return []
-            
-        db.connect()
-        img_id = db.images.get_image_id(file_path)
-        if not img_id:
-            db.close()
-            return []
-            
-        faces = db.people.get_faces_for_image(img_id) 
-        # Returns [(id, name, x, y, w, h, person_id), ...]
-        
-        # We also need UUIDs for thumbnails if we want to show Person Thumbnail as fallback
-        # Let's enrich the data
-        result = []
-        for face in faces:
-            fid, name, x, y, w, h, pid = face
-            
-            face_thumb_url = ""
-            if pid:
-                person_uuid = db.people.get_person_uuid(pid)
-                if person_uuid:
-                    thumb_path = os.path.abspath(os.path.join("thumbnails", "faces", f"{person_uuid}.jpg"))
-                    if os.path.exists(thumb_path):
-                        face_thumb_url = QUrl.fromLocalFile(thumb_path).toString()
-
-            result.append({
-                "face_id": fid,
-                "name": name if name else "",
-                "x": x, "y": y, "w": w, "h": h,
-                "person_id": pid,
-                "face_thumbnail_url": face_thumb_url
-            })
-        db.close()
-        return result
-
-    @pyqtSlot(int, int)
-    def reassign_face(self, face_id, new_person_id):
-        db.connect()
-        db.people.update_face_person_id(face_id, new_person_id)
-        db.commit()
-        db.close()
-        self.peopleChanged.emit()
-
     @pyqtSlot(str, result=str)
     def get_next_image_path(self, current_path):
         coords = self._find_path_coordinates(current_path)
@@ -628,29 +495,6 @@ class GalleryModel(QAbstractListModel):
                 return prev_section['images'][-1]['path']
                 
         return ""
-
-    @pyqtSlot(str, int)
-    def add_person_to_image(self, file_path, person_id):
-        if not file_path:
-            return
-        
-        db.connect()
-        img_id = db.images.get_image_id(file_path)
-        if img_id:
-            # Add a 'manual' face with 0 coordinates
-            # We don't have an encoding for this manual add, so None is appropriate.
-            db.people.add_face(img_id, person_id, b'', (0, 0, 0, 0))
-            db.commit()
-        db.close()
-        self.peopleChanged.emit()
-
-    @pyqtSlot(int)
-    def remove_face(self, face_id):
-        db.connect()
-        db.people.remove_face(face_id)
-        db.commit()
-        db.close()
-        self.peopleChanged.emit()
 
     @pyqtSlot(str, str)
     def add_tag_to_image_path(self, file_path, tag_name):

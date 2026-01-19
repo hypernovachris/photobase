@@ -99,46 +99,6 @@ Item {
                     }
                 }
 
-                // Face Recognition Section
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-                    Label {
-                        text: "People"
-                        color: theme.textColor
-                        font.pixelSize: 20
-                    }
-
-                    ColumnLayout {
-                        Layout.alignment: Qt.AlignLeft
-                        spacing: 10
-                        Label {
-                            text: "Choose whether Photobase should scan your images for faces in the background"
-                            color: theme.textColor
-                            font.pixelSize: 14
-                        }
-
-                        Switch {   
-                            checked: settingsController.faceScanEnabled
-                            onCheckedChanged: settingsController.faceScanEnabled = checked
-                        }
-
-                        // Spacer
-                        Item {
-                            Layout.fillWidth: true
-                        }
-                    }
-                    
-                    Label {
-                        text: "Note: this feature is currently slow and inaccurate."
-                        color: theme.textColor
-                        font.pixelSize: 12
-                        opacity: 0.7
-                        wrapMode: Text.WordWrap
-                        Layout.fillWidth: true
-                    }
-                }
-
                 // Directory List Section
                 ColumnLayout {
                     Layout.fillWidth: true

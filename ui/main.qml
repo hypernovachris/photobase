@@ -69,9 +69,6 @@ ApplicationWindow {
             text: "Tags"
         }
         StyledTabButton {
-            text: "People"
-        }
-        StyledTabButton {
             text: "Places"
         }
         StyledTabButton {
@@ -90,8 +87,6 @@ ApplicationWindow {
         }
         Tags {
         }
-        People {
-        }
         Places {
         }
         Search {
@@ -99,27 +94,5 @@ ApplicationWindow {
         Settings {
         }
     }
-    
 
-    footer: ToolBar {
-        visible: settingsController.faceScanEnabled
-        height: 30
-        background: Rectangle {
-            color: theme.headerColor
-        }
-        
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            
-            Text {
-                text: faceScanner.unscanned_count > 0 ? "Scanning faces: " + faceScanner.unscanned_count + " remaining..." : "All photos scanned."
-                color: theme.textColor
-                font.pixelSize: 12
-            }
-            
-            Item { Layout.fillWidth: true }
-        }
-    }
 }

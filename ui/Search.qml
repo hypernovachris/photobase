@@ -20,16 +20,6 @@ Item {
         var storedValue = value // Keep original for display/logic if needed, but ListModel needs consistent type?
         
         if (type === "tag") label = "Tag: " + value
-        if (type === "person") {
-             label = "Person: " + value // Fallback
-             storedValue = String(value)
-        }
-        if (type === "person_obj") {
-            // Special internal type to handle object passing
-            type = "person"
-            label = "Person: " + value.name
-            storedValue = String(value.id)
-        }
         
         if (type === "date_between" || type === "between") {
              // value is {start: "...", end: "..."}
@@ -259,7 +249,6 @@ Item {
                     FilterButton { text: "Between dates"; onClicked: filterDialogs.openDateBetweenDialog() }
                     FilterButton { text: "Has tag"; onClicked: filterDialogs.openTagDialog() }
 
-                    FilterButton { text: "Has person"; onClicked: filterDialogs.openPersonDialog() }
                     FilterButton { text: "Taken with camera"; onClicked: filterDialogs.openCameraDialog() }
                     FilterButton { text: "Taken with lens"; onClicked: filterDialogs.openLensDialog() }
             

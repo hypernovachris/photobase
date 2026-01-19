@@ -9,7 +9,6 @@ import os
 os.environ["QT_QUICK_CONTROLS_STYLE"] = "Basic"
 from core.gallery_model import GalleryModel
 from core.settings_controller import SettingsController
-from core.face_scanner import FaceScanner
 import json
 import sys
 import os
@@ -56,14 +55,6 @@ if __name__ == "__main__":
   
   app.thumbnailGenerator = ThumbnailGenerator(app)
   engine.rootContext().setContextProperty("thumbnailGenerator", app.thumbnailGenerator)
-  
-  app.faceScanner = FaceScanner(app)
-  engine.rootContext().setContextProperty("faceScanner", app.faceScanner)
-  
-  if config.getboolean("General", "face_scan_enabled", fallback=False):
-      app.faceScanner.start_scan()
-  
-  app.aboutToQuit.connect(app.faceScanner.stop_scan)
   
   # print("SettingsController initialized and registered")
   

@@ -2,7 +2,6 @@ import sqlite3
 import os
 from .repositories.image_repository import ImageRepository
 from .repositories.tag_repository import TagRepository
-from .repositories.person_repository import PersonRepository
 
 class Database:
   def __init__(self, db_path="photos.db"):
@@ -13,7 +12,6 @@ class Database:
     # Repositories
     self.images = None
     self.tags = None
-    self.people = None
 
   def connect(self):
     self.connection = sqlite3.connect(self.db_path)
@@ -23,7 +21,6 @@ class Database:
     # Initialize repositories with shared connection/cursor
     self.images = ImageRepository(self.connection, self.cursor)
     self.tags = TagRepository(self.connection, self.cursor)
-    self.people = PersonRepository(self.connection, self.cursor)
   
     self.connection.commit()
 
@@ -61,41 +58,17 @@ class Database:
         FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
       )
     """)
-    
-    # People and Faces
-    self.cursor.execute("""
-      CREATE TABLE IF NOT EXISTS people (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        uuid TEXT UNIQUE,
-        cover_face_quality REAL DEFAULT 0
-      )
-    """)
-    
-
-    self.cursor.execute("""
-      CREATE TABLE IF NOT EXISTS faces (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        image_id INTEGER,
-        person_id INTEGER,
-        encoding BLOB,
-        x INTEGER,
-        y INTEGER,
-        w INTEGER,
-        h INTEGER,
-        FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE,
-        FOREIGN KEY (person_id) REFERENCES people(id) ON DELETE CASCADE
-      )
-    """)
 
     self.connection.commit()
+
     # cleanup_orphan_tags is now in TagRepository, but we can't call it here 
     # freely unless we init repo first. 
     # For now, let's init repos in connect() AFTER table creation, which is what we do.
     # We can call it there if needed, or just let the repo handle it if called explicitly.
     # The original called it at the end of create_table...
     # We'll rely on the user/system calling it, or move it to connect().
-  
+    # TODO: wtf? figure out what to do
+
   def close(self):
     if self.connection:
       self.connection.close()
