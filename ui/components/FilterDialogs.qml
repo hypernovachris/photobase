@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-
+import "detail" // For PersonSelectionDialog
 Item {
     id: root
 
@@ -16,11 +16,22 @@ Item {
     function openDateBetweenDialog() { dateDialog.mode = "between"; dateDialog.open() }
     
     function openTagDialog() { tagDialog.open() }
-    function openPersonDialog() { personDialog.open() }
+    function openPersonDialog() { personSelector.open() }
     
-    function openCameraDialog() { stringDialog.mode = "camera"; stringDialog.title = "Camera Model"; stringDialog.open() }
-    function openLensDialog() { stringDialog.mode = "lens"; stringDialog.title = "Lens Model"; stringDialog.open() }
-    function openFolderDialog() { stringDialog.mode = "folder"; stringDialog.title = "Folder Path"; stringDialog.open() }
+    function openCameraDialog() { 
+        listSelectionDialog.title = "Select Camera Model"
+        listSelectionDialog.modelData = galleryModel.get_all_cameras()
+        listSelectionDialog.mode = "camera"
+        listSelectionDialog.open() 
+    }
+    function openLensDialog() { 
+        listSelectionDialog.title = "Select Lens Model"
+        listSelectionDialog.modelData = galleryModel.get_all_lenses()
+        listSelectionDialog.mode = "lens"
+        listSelectionDialog.open() 
+    }
+
+    function openFolderDialog() { stringDialog.mode = "folder"; stringDialog.title = "Folder Name"; stringDialog.open() }
     function openExtensionDialog() { stringDialog.mode = "extension"; stringDialog.title = "File Extension"; stringDialog.open() }
     function openFilenameDialog() { stringDialog.mode = "filename"; stringDialog.title = "Filename Starts With"; stringDialog.open() }
 
@@ -33,40 +44,83 @@ Item {
             return "Between Dates"
         }
         anchors.centerIn: Overlay.overlay
+        width: mode === "between" ? 650 : 350
+        height: 450
         modal: true
         standardButtons: Dialog.Ok | Dialog.Cancel
 
         property string mode: "before"
-        // Simple text input for MVP dates (YYYY-MM-DD)
-        // Ideally use a Calendar picker, but text is easier for now.
+        // Return YYYY-MM-DD string(s)
         
-        ColumnLayout {
-            Label { text: "Date (YYYY-MM-DD):" }
-            TextField { 
-                id: dateInput1 
-                placeholderText: "2023-01-01"
-                text: ""
+        RowLayout {
+            anchors.fill: parent
+            spacing: 20
+            
+            ColumnLayout {
+                Layout.fillWidth: true
+                Label { 
+                    text: dateDialog.mode === "between" ? "Start Date:" : "Date:" 
+                    font.bold: true
+                }
+                
+                DatePicker {
+                    id: datePicker1
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    onDateSelected: (d) => { date1String.text = Qt.formatDate(d, "yyyy-MM-dd") }
+                }
+                TextField {
+                    id: date1String
+                    text: Qt.formatDate(new Date(), "yyyy-MM-dd")
+                    Layout.fillWidth: true
+                    readOnly: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
             
-            Label { 
-                text: "And:" 
+            ColumnLayout {
                 visible: dateDialog.mode === "between"
+                Layout.fillWidth: true
+                
+                Label { 
+                    text: "End Date:" 
+                    font.bold: true
+                }
+                
+                DatePicker {
+                    id: datePicker2
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    onDateSelected: (d) => { date2String.text = Qt.formatDate(d, "yyyy-MM-dd") }
+                }
+                TextField {
+                    id: date2String
+                    text: Qt.formatDate(new Date(), "yyyy-MM-dd")
+                    Layout.fillWidth: true
+                    readOnly: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
             }
-            TextField { 
-                id: dateInput2
-                visible: dateDialog.mode === "between"
-                placeholderText: "2023-12-31"
+        }
+        
+        onOpened: {
+            // Reset to today
+            var today = new Date()
+            datePicker1.setDate(today)
+            date1String.text = Qt.formatDate(today, "yyyy-MM-dd")
+            
+            if (mode === "between") {
+                datePicker2.setDate(today)
+                date2String.text = Qt.formatDate(today, "yyyy-MM-dd")
             }
         }
 
         onAccepted: {
-            var val = dateInput1.text
+            var val = date1String.text
             if (mode === "between") {
-                val = { start: dateInput1.text, end: dateInput2.text }
+                val = { start: date1String.text, end: date2String.text }
             }
             root.filterAdded(mode, val)
-            dateInput1.text = ""
-            dateInput2.text = ""
         }
     }
 
@@ -97,34 +151,46 @@ Item {
         }
     }
 
-    // --- Person Dialog ---
+    // --- Person Selection Dialog (Reused) ---
+    PersonSelectionDialog {
+        id: personSelector
+        anchors.centerIn: Overlay.overlay
+        onPersonSelected: (personId) => {
+             root.filterAdded("person", personId)
+             personSelector.close()
+        }
+    }
+
+    // --- Generic List Selection Dialog (Camera/Lens) ---
     Dialog {
-        id: personDialog
-        title: "Select Person"
+        id: listSelectionDialog
+        title: "Select Item"
         anchors.centerIn: Overlay.overlay
         width: 300
         height: 400
         modal: true
         standardButtons: Dialog.Cancel
+        
+        property var modelData: []
+        property string mode: ""
 
         ListView {
-            id: personListView
             anchors.fill: parent
-            model: galleryModel.get_people_model() // Returns objects
+            model: listSelectionDialog.modelData
             clip: true
             
             delegate: ItemDelegate {
-                text: modelData.name
-                width: parent.width
+                text: modelData
+                width: ListView.view.width
                 onClicked: {
-                    root.filterAdded("person", modelData.id) // Use ID for person
-                    personDialog.close()
+                    root.filterAdded(listSelectionDialog.mode, modelData)
+                    listSelectionDialog.close()
                 }
             }
         }
     }
 
-    // --- Generic String Dialog ---
+    // --- Generic String Dialog (Folder, Ext, Filename) ---
     Dialog {
         id: stringDialog
         title: "Enter Value"

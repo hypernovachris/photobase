@@ -304,6 +304,20 @@ class GalleryModel(QAbstractListModel):
         return [t[1] for t in tags]
 
     @pyqtSlot(result=list)
+    def get_all_cameras(self):
+        db.connect()
+        res = db.images.get_all_cameras()
+        db.close()
+        return res
+
+    @pyqtSlot(result=list)
+    def get_all_lenses(self):
+        db.connect()
+        res = db.images.get_all_lenses()
+        db.close()
+        return res
+
+    @pyqtSlot(result=list)
     def get_all_tags_model(self):
         """Returns a list of dictionaries for QML: name, count, thumbnail"""
         db.connect()
@@ -353,11 +367,6 @@ class GalleryModel(QAbstractListModel):
         
     @pyqtSlot(list)
     def search(self, filters):
-        # filters is a list of dicts from QML
-        # We need to ensure we convert QVariantMap/QVariantList to python types if not automatic.
-        # PyQt6 usually handles it.
-        # To be safe, we can cast or inspect.
-        # Assuming automatic conversion.
         self._active_filters = filters
         self._active_filter_name = "Search Results"
         self.load_images()

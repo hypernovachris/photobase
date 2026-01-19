@@ -17,20 +17,26 @@ Item {
     function addFilter(type, value) {
         // Construct a human readable label
         var label = type + ": " + value
+        var storedValue = value // Keep original for display/logic if needed, but ListModel needs consistent type?
+        
         if (type === "tag") label = "Tag: " + value
         if (type === "person") {
              label = "Person: " + value // Fallback
+             storedValue = String(value)
         }
         if (type === "person_obj") {
             // Special internal type to handle object passing
             type = "person"
             label = "Person: " + value.name
-            value = value.id
+            storedValue = String(value.id)
         }
         
         if (type === "date_between") {
+             // value is {start: "...", end: "..."}
              label = "Between " + value.start + " and " + value.end
+             storedValue = JSON.stringify(value)
         }
+        
         if (type === "before") label = "Before " + value
         if (type === "since") label = "Since " + value
         if (type === "camera") label = "Camera: " + value
@@ -41,7 +47,7 @@ Item {
 
         activeFiltersModel.append({
             "type": type,
-            "value": value,
+            "value": String(storedValue), // Force string
             "negated": isNegatedMode,
             "label": (isNegatedMode ? "NOT " : "") + label
         })
@@ -84,21 +90,24 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             height: 60
-            color: theme.headerColor
-            z: 10
+            color: theme.backgroundColor
 
             RowLayout {
                 anchors.fill: parent
                 anchors.margins: 10
-                spacing: 10
-                
+                spacing: 0
+                Item {
+                    width: 10
+                }
                 // Search Bar Input (Visual representation of filters)
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     color: theme.backgroundColor
                     border.color: theme.borderColor
-                    radius: 4
+                    topLeftRadius: 4
+                    bottomLeftRadius: 4
+                    anchors.margins: 10
                     
                     RowLayout {
                         anchors.fill: parent
@@ -125,7 +134,7 @@ Item {
                             clip: true
                             
                             delegate: Rectangle {
-                                height: parent.height
+                                height: 28
                                 width: chipRow.implicitWidth + 20
                                 color: theme.buttonColor
                                 radius: 10
@@ -139,18 +148,10 @@ Item {
                                         color: theme.textColor
                                         font.pixelSize: 12
                                     }
-                                    MouseArea {
-                                        width: 16
-                                        height: 16
-                                        cursorShape: Qt.PointingHandCursor
-                                        
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: "x"
-                                            color: theme.secondaryTextColor
-                                        }
+                                    IconButton {
+                                        source: "file:assets/icons/x.svg"
                                         onClicked: {
-                                            activeFiltersModel.remove(index)
+                                            activeFiltersModel.remove(model.index)
                                         }
                                     }
                                 }
@@ -161,25 +162,24 @@ Item {
 
                 // Search Button (Execute)
                 Button {
-                    icon.source: "file:assets/icons/search.svg" // We don't have it, fallback to text?
-                    text: "Search"
+                    enabled: activeFiltersModel.count > 0
                     Layout.preferredWidth: 80
                     Layout.fillHeight: true
-                    enabled: activeFiltersModel.count > 0
                     onClicked: performSearch()
-                    
-                    contentItem: RowLayout { // Custom content to show icon or text
-                         Text { 
-                             text: "Search" 
-                             color: parent.enabled ? theme.buttonTextColor : theme.secondaryTextColor
-                             Layout.alignment: Qt.AlignCenter
-                         }
+                    IconButton {
+                        source: "file:assets/icons/search.svg"
+                        clickable: false
+                        // center in button
+                        anchors.centerIn: parent
                     }
                     background: Rectangle {
-                        color: parent.down ? Qt.darker(theme.highlightColor, 1.2) : theme.highlightColor
-                        radius: 4
-                        opacity: parent.enabled ? 1.0 : 0.5
+                        color: theme.buttonColor
+                        topRightRadius: 4
+                        bottomRightRadius: 4
                     }
+                }
+                Item {
+                    width: 10
                 }
             }
         }

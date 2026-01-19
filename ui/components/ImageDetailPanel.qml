@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Effects
-import ".." // For TagEditDialog, PersonSelectionDialog
+import ".." // For TagEditDialog
 import "detail" // Import the new components
 
 Item {

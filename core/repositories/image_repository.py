@@ -77,6 +77,7 @@ class ImageRepository(BaseRepository):
             # Delete database entries
             self.cursor.execute(f"DELETE FROM images WHERE file_path IN ({placeholders})", tuple(chunk))
             # TODO: should we also remove faces, tags?
+            # YES WE ABSOLUTELY MUST
             # and make sure to remove any orphaned tags/people
         
         self.connection.commit()
@@ -145,19 +146,23 @@ class ImageRepository(BaseRepository):
 
     # --- Filtering ---
 
-    # --- Filtering ---
-
     def _parse_date(self, date_str):
         from datetime import datetime
-        # Parse YYYY-MM-DD to timestamp
-        # naive, assume start of day?
-        # If 'before', we want strictly before start of that day? Or end?
-        # Usually 'Before 2023-01-01' means < 2023-01-01 00:00:00
         try:
             dt = datetime.strptime(date_str, "%Y-%m-%d")
             return dt.timestamp()
         except ValueError:
             return 0
+
+    def get_all_cameras(self):
+        query = "SELECT DISTINCT camera FROM images WHERE camera IS NOT NULL AND camera != '' ORDER BY camera"
+        self.cursor.execute(query)
+        return [row[0] for row in self.cursor.fetchall()]
+
+    def get_all_lenses(self):
+        query = "SELECT DISTINCT lens FROM images WHERE lens IS NOT NULL AND lens != '' ORDER BY lens"
+        self.cursor.execute(query)
+        return [row[0] for row in self.cursor.fetchall()]
 
     def _build_filter_conditions(self, filters):
         conditions = []
@@ -184,27 +189,49 @@ class ImageRepository(BaseRepository):
                     [val]
                 )
             elif ftype == 'person':
-                # val is person_id
+                # val is person_id, might be string now
+                try:
+                    pid = int(val)
+                except:
+                    pid = -1
+                    
                 add_subquery_condition(
                     "SELECT image_id FROM faces WHERE person_id = ?",
-                    [val]
+                    [pid]
                 )
             elif ftype == 'camera':
-                op = "NOT LIKE" if negated else "LIKE"
-                conditions.append(f"camera {op} ?")
+                # Handle NULLs for negation
+                if negated:
+                    conditions.append("(camera NOT LIKE ? OR camera IS NULL)")
+                else:
+                    conditions.append("camera LIKE ?")
                 params.append(f"%{val}%")
             elif ftype == 'lens':
-                op = "NOT LIKE" if negated else "LIKE"
-                conditions.append(f"lens {op} ?")
+                 # Handle NULLs for negation
+                if negated:
+                    conditions.append("(lens NOT LIKE ? OR lens IS NULL)")
+                else:
+                    conditions.append("lens LIKE ?")
                 params.append(f"%{val}%")
             elif ftype == 'folder':
-                op = "NOT LIKE" if negated else "LIKE"
-                # Check directory
-                # We can fuzzy match path: %/val/% or just %val%
-                # "In folder" implies direct parent? Or anywhere in tree?
-                # User probably expects partial match or recursive.
-                conditions.append(f"file_path {op} ?")
-                params.append(f"%{val}%")
+                ops = "NOT LIKE" if negated else "LIKE"
+                logic_op = "AND" if negated else "OR"
+                
+                sub_conds = []
+                sub_params = []
+                
+                # Slash
+                sub_conds.append(f"file_path {ops} ?")
+                sub_params.append(f"%/{val}/%")
+                
+                # Backslash
+                sub_conds.append(f"file_path {ops} ?")
+                sub_params.append(f"%\\{val}\\%")
+                
+                combined = f"({' '+logic_op+' '.join(sub_conds)})"
+                conditions.append(combined)
+                params.extend(sub_params)
+                
             elif ftype == 'extension':
                 op = "NOT LIKE" if negated else "LIKE"
                 conditions.append(f"file_path {op} ?")
@@ -213,17 +240,24 @@ class ImageRepository(BaseRepository):
                     val = '.' + val
                 params.append(f"%{val}")
             elif ftype == 'filename':
-                # Filename starts with
-                import os
-                # SQLite doesn't have easy "basename starts with".
-                # file_path LIKE '%/val%' matches anywhere.
-                # We can try logic: basename is part of path string.
-                # Actually, simpler to just LIKE for now, or use python? No, SQL is better.
-                # If we assume standard paths: LIKE .../prefix%
-                # Windows paths use \
-                op = "NOT LIKE" if negated else "LIKE"
-                conditions.append(f"file_path {op} ?")
-                params.append(f"%\\{val}%") # Hacky for windows
+                ops = "NOT LIKE" if negated else "LIKE"
+                logic_op = "AND" if negated else "OR"
+                
+                sub_conds = []
+                sub_params = []
+                
+                # Starts with val after /
+                sub_conds.append(f"file_path {ops} ?")
+                sub_params.append(f"%/{val}%")
+                
+                # Starts with val after \
+                sub_conds.append(f"file_path {ops} ?")
+                sub_params.append(f"%\\{val}%")
+                 
+                combined = f"({' '+logic_op+' '.join(sub_conds)})"
+                conditions.append(combined)
+                params.extend(sub_params)
+
             elif ftype == 'before':
                 ts = self._parse_date(val)
                 op = ">=" if negated else "<"
@@ -231,14 +265,25 @@ class ImageRepository(BaseRepository):
                 params.append(ts)
             elif ftype == 'since':
                 ts = self._parse_date(val)
-                op = "<" if negated else ">" # Since usually means >=
+                op = "<" if negated else ">" # Since means >=
                 conditions.append(f"last_modified {op} ?")
                 params.append(ts)
-            elif ftype == 'between':
-                # val is {start, end}
-                start_ts = self._parse_date(val.get('start'))
-                end_ts = self._parse_date(val.get('end'))
-                # modify end_ts to end of day? + 86400
+            elif ftype == 'date_between':
+                pass
+            
+            if ftype == 'between' or ftype == 'date_between':
+                # val is JSON string now?
+                import json
+                try:
+                    if isinstance(val, str):
+                        val_obj = json.loads(val)
+                    else:
+                        val_obj = val
+                except:
+                    val_obj = {}
+                    
+                start_ts = self._parse_date(val_obj.get('start', ''))
+                end_ts = self._parse_date(val_obj.get('end', ''))
                 end_ts += 86400 
                 
                 if negated:
