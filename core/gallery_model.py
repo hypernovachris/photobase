@@ -404,9 +404,6 @@ class GalleryModel(QAbstractListModel):
             return None
             
         import datetime
-        dt = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
-        date_str = dt.strftime("%B %d, %Y, %I:%M %p")
-        
         from core.image_processing import get_exif_string
         
         db.connect()
@@ -414,11 +411,19 @@ class GalleryModel(QAbstractListModel):
         
         camera = "Unavailable"
         lens = "Unavailable"
+        date_timestamp = 0
         
         meta = db.images.get_image_metadata(file_path)
         if meta:
             if meta[0]: camera = meta[0]
             if meta[1]: lens = meta[1]
+            if len(meta) > 2 and meta[2]: date_timestamp = meta[2]
+
+        if not date_timestamp:
+             date_timestamp = os.path.getmtime(file_path)
+             
+        dt = datetime.datetime.fromtimestamp(date_timestamp)
+        date_str = dt.strftime("%B %d, %Y, %I:%M %p")
 
         tags = []
         if img_id:

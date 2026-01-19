@@ -35,12 +35,52 @@ class Database:
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_path TEXT UNIQUE,
         last_modified INTEGER,
+        date_taken INTEGER,
         thumbnail_path TEXT,
         scanned_for_faces INTEGER DEFAULT 0,
         camera TEXT,
         lens TEXT
       )
     """)
+    
+    # Schema Migration: Add date_taken if it doesn't exist
+    try:
+        self.cursor.execute("SELECT date_taken FROM images LIMIT 1")
+    except sqlite3.OperationalError:
+        print("Migrating database: Adding date_taken column...")
+        self.cursor.execute("ALTER TABLE images ADD COLUMN date_taken INTEGER")
+        
+        # Backfill existing images
+        print("Migrating database: Backfilling date_taken for existing images...")
+        self.cursor.execute("SELECT id, file_path, last_modified FROM images")
+        rows = self.cursor.fetchall()
+        
+        # Import locally to avoid circular dependency (image_processing imports db)
+        try:
+            from core.image_processing import get_date_taken
+            
+            updates = []
+            for row in rows:
+                img_id, file_path, last_modified = row
+                
+                # Try to get from EXIF
+                dt = get_date_taken(file_path)
+                
+                # Fallback to last_modified
+                if dt is None:
+                    dt = last_modified
+                
+                updates.append((dt, img_id))
+                
+            if updates:
+                self.cursor.executemany("UPDATE images SET date_taken = ? WHERE id = ?", updates)
+                self.connection.commit()
+                print(f"Migrated {len(updates)} images.")
+        except ImportError:
+            print("Could not import get_date_taken for migration backfill.")
+            pass
+
+
 
     # Tagging support
     self.cursor.execute("""

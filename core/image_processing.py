@@ -8,6 +8,47 @@ import pillow_heif
 
 pillow_heif.register_heif_opener()
 
+
+def get_date_taken(file_path):
+    """
+    Extracts the 'Date Taken' from EXIF metadata.
+    Returns unix timestamp (int) or None if not found.
+    """
+    try:
+        if not os.path.exists(file_path):
+            return None
+        
+        with Image.open(file_path) as img:
+            exif = img.getexif()
+            if not exif:
+                return None
+            
+            # DateTimeOriginal (36867), DateTimeDigitized (36868), DateTime (306)
+            date_str = exif.get(36867) or exif.get(36868) or exif.get(306)
+            
+            if not date_str:
+                # Check ExifOffset (34665)
+                sub_ifd = exif.get_ifd(34665)
+                if sub_ifd:
+                     date_str = sub_ifd.get(36867) or sub_ifd.get(36868) or sub_ifd.get(306)
+            
+            if date_str:
+                # Format is typically "YYYY:MM:DD HH:MM:SS"
+                # Handle potential weirdness or null bytes
+                date_str = str(date_str).replace('\x00', '').strip()
+                try:
+                    import datetime
+                    dt = datetime.datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
+                    return int(dt.timestamp())
+                except ValueError:
+                    pass
+                    
+            return None
+
+    except Exception as e:
+        # print(f"Error extracting date for {file_path}: {e}")
+        return None
+
 def create_and_save_square_thumbnail(image, save_path, size=(128, 128)):
     """
     Creates a square thumbnail from a PIL Image object and saves it to save_path.
@@ -88,8 +129,14 @@ class ImageScanner:
                 
                 # Extract Metadata
                 camera, lens = get_camera_lens_info(file_path)
+                date_taken = get_date_taken(file_path)
                 
-                files_to_update.append((file_path, mtime, thumb_path, camera, lens))
+                # Fallback to mtime if EXIF date is unavailable
+                if not date_taken:
+                    date_taken = mtime
+                
+                files_to_update.append((file_path, mtime, thumb_path, camera, lens, date_taken))
+
                 
           except OSError:
              pass 

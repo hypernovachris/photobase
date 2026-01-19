@@ -3,16 +3,17 @@ import sqlite3
 from .base_repository import BaseRepository
 
 class ImageRepository(BaseRepository):
-    def add_or_update_image(self, file_path, last_modified, thumbnail_path, camera=None, lens=None):
+    def add_or_update_image(self, file_path, last_modified, thumbnail_path, camera=None, lens=None, date_taken=None):
         self.cursor.execute("""
-          INSERT INTO images (file_path, last_modified, thumbnail_path, camera, lens)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO images (file_path, last_modified, thumbnail_path, camera, lens, date_taken)
+          VALUES (?, ?, ?, ?, ?, ?)
           ON CONFLICT(file_path) DO UPDATE SET
             last_modified = excluded.last_modified,
+            date_taken = excluded.date_taken,
             thumbnail_path = excluded.thumbnail_path,
             camera = COALESCE(excluded.camera, images.camera),
             lens = COALESCE(excluded.lens, images.lens)
-        """, (file_path, last_modified, thumbnail_path, camera, lens))
+        """, (file_path, last_modified, thumbnail_path, camera, lens, date_taken))
         # Commit removed - handled by main helper or batched
 
     def get_all_images(self):
@@ -21,7 +22,7 @@ class ImageRepository(BaseRepository):
         return self.cursor.fetchall()
 
     def get_image_metadata(self, file_path):
-        self.cursor.execute("SELECT camera, lens FROM images WHERE file_path = ?", (file_path,))
+        self.cursor.execute("SELECT camera, lens, date_taken FROM images WHERE file_path = ?", (file_path,))
         return self.cursor.fetchone()
     
     def get_all_image_paths_and_dates(self):
@@ -199,12 +200,12 @@ class ImageRepository(BaseRepository):
             elif ftype == 'before':
                 ts = self._parse_date(val)
                 op = ">=" if negated else "<"
-                conditions.append(f"last_modified {op} ?")
+                conditions.append(f"date_taken {op} ?")
                 params.append(ts)
             elif ftype == 'since':
                 ts = self._parse_date(val)
                 op = "<" if negated else ">" # Since means >=
-                conditions.append(f"last_modified {op} ?")
+                conditions.append(f"date_taken {op} ?")
                 params.append(ts)
             elif ftype == 'date_between':
                 pass
@@ -225,10 +226,10 @@ class ImageRepository(BaseRepository):
                 end_ts += 86400 
                 
                 if negated:
-                    conditions.append("(last_modified < ? OR last_modified > ?)")
+                    conditions.append("(date_taken < ? OR date_taken > ?)")
                     params.extend([start_ts, end_ts])
                 else:
-                    conditions.append("last_modified BETWEEN ? AND ?")
+                    conditions.append("date_taken BETWEEN ? AND ?")
                     params.extend([start_ts, end_ts])
 
         where_clause = ""
@@ -247,7 +248,7 @@ class ImageRepository(BaseRepository):
         where_clause, params = self._build_filter_conditions(filters)
         
         query = f"""
-            SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month 
+            SELECT DISTINCT strftime('%Y-%m', datetime(date_taken, 'unixepoch')) AS month 
             FROM images 
             {where_clause}
             ORDER BY month DESC
@@ -266,7 +267,7 @@ class ImageRepository(BaseRepository):
         # We need to add the month condition to the WHERE clause using AND
         # If where_clause is empty, start with WHERE. Else append AND.
         
-        month_condition = "strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?"
+        month_condition = "strftime('%Y-%m', datetime(date_taken, 'unixepoch')) = ?"
         
         if where_clause:
             final_where = f"{where_clause} AND {month_condition}"
@@ -279,7 +280,7 @@ class ImageRepository(BaseRepository):
             SELECT file_path, thumbnail_path 
             FROM images
             {final_where}
-            ORDER BY last_modified DESC
+            ORDER BY date_taken DESC
         """
         self.cursor.execute(query, params)
 
