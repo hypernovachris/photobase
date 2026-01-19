@@ -25,11 +25,9 @@ class GalleryModel(QAbstractListModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._sections = []
-        self._filter_tag_id = None
-        self._filter_tag_name = None
-        self._filter_person_id = None
-        self._filter_person_name = None
-        
+        self._active_filters = []
+        # Support legacy properties for active filter display
+        self._active_filter_name = ""
 
         self.face_scanner = FaceScanner()
         # self.face_scanner.signals.progress.connect(self.on_scan_progress)
@@ -76,11 +74,11 @@ class GalleryModel(QAbstractListModel):
         db.connect()
         
         # 1. Get Distinct Months based on current filter
-        month_strings = db.images.get_filtered_months(self._filter_tag_id, self._filter_person_id)
+        month_strings = db.images.get_filtered_months(self._active_filters)
         
         for month_str in month_strings:
             # 2. Get Images for Month based on current filter
-            image_rows = db.images.get_filtered_images(month_str, self._filter_tag_id, self._filter_person_id)
+            image_rows = db.images.get_filtered_images(month_str, self._active_filters)
             
             image_list = []
             for (file_path, thumb_path) in image_rows:
@@ -250,27 +248,33 @@ class GalleryModel(QAbstractListModel):
             
         db.connect()
 
-        # Check if we are filtering by Person
-        if self._filter_person_id is not None:
-             for path in self._selected_paths:
-                 img_id = db.images.get_image_id(path)
-                 if img_id:
-                     db.people.remove_person_from_image(img_id, self._filter_person_id)
-             db.commit()
-             self.peopleChanged.emit()
-             # Refresh the view because items might no longer belong to the filter
-             self.load_images()
+        # Iterate over all active filters
+        for f in self._active_filters:
+             ftype = f.get('type')
+             val = f.get('value')
+             
+             if ftype == 'person':
+                 # val is person_id
+                 for path in self._selected_paths:
+                     img_id = db.images.get_image_id(path)
+                     if img_id:
+                         db.people.remove_person_from_image(img_id, val)
+                 self.peopleChanged.emit()
+                 
+             elif ftype == 'tag':
+                 # val is tag_name
+                 # need tag_id
+                 tag_id = db.tags.get_or_create_tag(val)
+                 if tag_id:
+                     for path in self._selected_paths:
+                         img_id = db.images.get_image_id(path)
+                         if img_id:
+                             db.tags.remove_tag_from_image(img_id, tag_id)
+                 self.tagsChanged.emit()
 
-        # Check if we are filtering by Tag
-        elif self._filter_tag_id is not None: 
-            for path in self._selected_paths:
-                img_id = db.images.get_image_id(path)
-                if img_id:
-                    db.tags.remove_tag_from_image(img_id, self._filter_tag_id)
-            db.commit()
-            self.tagsChanged.emit()
-            self.load_images() # Refresh to remove from view
-            
+        db.commit()
+        # Refresh the view because items might no longer belong to the filter
+        self.load_images() 
         db.close()
 
     @pyqtSlot(str)
@@ -335,33 +339,30 @@ class GalleryModel(QAbstractListModel):
 
     @pyqtSlot(str)
     def set_tag_filter(self, tag_name):
-        try:
-            db.connect()
-            # Find ID
-            db.cursor.execute("SELECT id FROM tags WHERE name = ?", (tag_name,))
-            res = db.cursor.fetchone()
-            db.close()
-            
-            if res:
-                self._filter_tag_id = res[0]
-                self._filter_tag_name = tag_name
-                self.load_images()
-                self.filterChanged.emit(tag_name)
-        except Exception as e:
-            print(f"Error setting filter: {e}")
-            if db.connection:
-                db.close()
+        self._active_filters = [{'type': 'tag', 'value': tag_name}]
+        self._active_filter_name = tag_name
+        self.load_images()
+        self.filterChanged.emit(tag_name)
     
     @pyqtSlot()
     def clear_tag_filter(self):
-        self._filter_tag_id = None
-        self._filter_tag_name = None
-        self._filter_person_id = None
-        self._filter_person_name = None
-
+        self._active_filters = []
+        self._active_filter_name = ""
         self.load_images()
         self.filterChanged.emit("")
         
+    @pyqtSlot(list)
+    def search(self, filters):
+        # filters is a list of dicts from QML
+        # We need to ensure we convert QVariantMap/QVariantList to python types if not automatic.
+        # PyQt6 usually handles it.
+        # To be safe, we can cast or inspect.
+        # Assuming automatic conversion.
+        self._active_filters = filters
+        self._active_filter_name = "Search Results"
+        self.load_images()
+        self.filterChanged.emit("Search Results")
+
     @pyqtSlot(int, str)
     def rename_tag(self, tag_id, new_name):
         db.connect()
@@ -373,11 +374,7 @@ class GalleryModel(QAbstractListModel):
         
     @pyqtSlot(result=str)
     def get_active_filter(self):
-        if self._filter_tag_name:
-            return self._filter_tag_name
-        if self._filter_person_name:
-            return self._filter_person_name
-        return ""
+        return self._active_filter_name
 
     # --- People & Face Scanner ---
     
@@ -438,16 +435,14 @@ class GalleryModel(QAbstractListModel):
 
     @pyqtSlot(int)
     def set_person_filter(self, person_id):
-        self._filter_tag_id = None
-        self._filter_tag_name = None
-        self._filter_person_id = person_id
-        
         # Find name for display
         db.connect()
         p = db.people.get_person(person_id)
         db.close()
         name = p[1] if p and p[1] else "Person"
-        self._filter_person_name = name
+
+        self._active_filters = [{'type': 'person', 'value': person_id}]
+        self._active_filter_name = name
 
         self.load_images()
         self.filterChanged.emit(name)

@@ -145,66 +145,159 @@ class ImageRepository(BaseRepository):
 
     # --- Filtering ---
 
-    def get_filtered_months(self, tag_id=None, person_id=None):
-        """Returns a list of distinct month strings (YYYY-MM) based on filters."""
-        if tag_id is not None:
-            query = """
-                SELECT DISTINCT strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) AS month 
-                FROM images i
-                JOIN image_tags it ON i.id = it.image_id
-                WHERE it.tag_id = ?
-                ORDER BY month DESC
-            """
-            self.cursor.execute(query, (tag_id,))
-        elif person_id is not None:
-            query = """
-                SELECT DISTINCT strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) AS month 
-                FROM images i
-                JOIN faces f ON i.id = f.image_id
-                WHERE f.person_id = ?
-                ORDER BY month DESC
-            """
-            self.cursor.execute(query, (person_id,))
-        else:
-            query = """
-                SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month 
-                FROM images 
-                ORDER BY month DESC
-            """
-            self.cursor.execute(query)
+    # --- Filtering ---
+
+    def _parse_date(self, date_str):
+        from datetime import datetime
+        # Parse YYYY-MM-DD to timestamp
+        # naive, assume start of day?
+        # If 'before', we want strictly before start of that day? Or end?
+        # Usually 'Before 2023-01-01' means < 2023-01-01 00:00:00
+        try:
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            return dt.timestamp()
+        except ValueError:
+            return 0
+
+    def _build_filter_conditions(self, filters):
+        conditions = []
+        params = []
         
+        if not filters:
+            return "", []
+
+        for f in filters:
+            ftype = f.get('type')
+            val = f.get('value')
+            negated = f.get('negated', False)
+            
+            # Helper for subquery existence
+            def add_subquery_condition(sub_sql, sub_params):
+                op = "NOT IN" if negated else "IN"
+                conditions.append(f"id {op} ({sub_sql})")
+                params.extend(sub_params)
+
+            if ftype == 'tag':
+                # val is tag name
+                add_subquery_condition(
+                    "SELECT image_id FROM image_tags JOIN tags ON image_tags.tag_id = tags.id WHERE tags.name = ?",
+                    [val]
+                )
+            elif ftype == 'person':
+                # val is person_id
+                add_subquery_condition(
+                    "SELECT image_id FROM faces WHERE person_id = ?",
+                    [val]
+                )
+            elif ftype == 'camera':
+                op = "NOT LIKE" if negated else "LIKE"
+                conditions.append(f"camera {op} ?")
+                params.append(f"%{val}%")
+            elif ftype == 'lens':
+                op = "NOT LIKE" if negated else "LIKE"
+                conditions.append(f"lens {op} ?")
+                params.append(f"%{val}%")
+            elif ftype == 'folder':
+                op = "NOT LIKE" if negated else "LIKE"
+                # Check directory
+                # We can fuzzy match path: %/val/% or just %val%
+                # "In folder" implies direct parent? Or anywhere in tree?
+                # User probably expects partial match or recursive.
+                conditions.append(f"file_path {op} ?")
+                params.append(f"%{val}%")
+            elif ftype == 'extension':
+                op = "NOT LIKE" if negated else "LIKE"
+                conditions.append(f"file_path {op} ?")
+                # e.g. .jpg
+                if not val.startswith('.'):
+                    val = '.' + val
+                params.append(f"%{val}")
+            elif ftype == 'filename':
+                # Filename starts with
+                import os
+                # SQLite doesn't have easy "basename starts with".
+                # file_path LIKE '%/val%' matches anywhere.
+                # We can try logic: basename is part of path string.
+                # Actually, simpler to just LIKE for now, or use python? No, SQL is better.
+                # If we assume standard paths: LIKE .../prefix%
+                # Windows paths use \
+                op = "NOT LIKE" if negated else "LIKE"
+                conditions.append(f"file_path {op} ?")
+                params.append(f"%\\{val}%") # Hacky for windows
+            elif ftype == 'before':
+                ts = self._parse_date(val)
+                op = ">=" if negated else "<"
+                conditions.append(f"last_modified {op} ?")
+                params.append(ts)
+            elif ftype == 'since':
+                ts = self._parse_date(val)
+                op = "<" if negated else ">" # Since usually means >=
+                conditions.append(f"last_modified {op} ?")
+                params.append(ts)
+            elif ftype == 'between':
+                # val is {start, end}
+                start_ts = self._parse_date(val.get('start'))
+                end_ts = self._parse_date(val.get('end'))
+                # modify end_ts to end of day? + 86400
+                end_ts += 86400 
+                
+                if negated:
+                    conditions.append("(last_modified < ? OR last_modified > ?)")
+                    params.extend([start_ts, end_ts])
+                else:
+                    conditions.append("last_modified BETWEEN ? AND ?")
+                    params.extend([start_ts, end_ts])
+
+        where_clause = ""
+        if conditions:
+            where_clause = "WHERE " + " AND ".join(conditions)
+            
+        return where_clause, params
+
+    def get_filtered_months(self, filters=None):
+        """
+        Returns a list of distinct month strings (YYYY-MM) based on filters.
+        filters: List of dicts {type, value, negated}
+        """
+        if filters is None: filters = []
+        
+        where_clause, params = self._build_filter_conditions(filters)
+        
+        query = f"""
+            SELECT DISTINCT strftime('%Y-%m', datetime(last_modified, 'unixepoch')) AS month 
+            FROM images 
+            {where_clause}
+            ORDER BY month DESC
+        """
+        self.cursor.execute(query, params)
         return [row[0] for row in self.cursor.fetchall()]
 
-    def get_filtered_images(self, month_str, tag_id=None, person_id=None):
-        """Returns a list of (file_path, thumbnail_path) tuples for a given month and filters."""
-        if tag_id is not None:
-            query = """
-                SELECT i.file_path, i.thumbnail_path 
-                FROM images i
-                JOIN image_tags it ON i.id = it.image_id
-                WHERE it.tag_id = ? 
-                AND strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) = ?
-                ORDER BY i.last_modified DESC
-            """
-            self.cursor.execute(query, (tag_id, month_str))
-        elif person_id is not None:
-            # Use DISTINCT on file_path to handle multiple faces of same person in one image
-            query = """
-                SELECT DISTINCT i.file_path, i.thumbnail_path 
-                FROM images i
-                JOIN faces f ON i.id = f.image_id
-                WHERE f.person_id = ? 
-                AND strftime('%Y-%m', datetime(i.last_modified, 'unixepoch')) = ?
-                ORDER BY i.last_modified DESC
-            """
-            self.cursor.execute(query, (person_id, month_str))
+    def get_filtered_images(self, month_str, filters=None):
+        """
+        Returns a list of (file_path, thumbnail_path) tuples for a given month and filters.
+        """
+        if filters is None: filters = []
+        
+        where_clause, params = self._build_filter_conditions(filters)
+        
+        # We need to add the month condition to the WHERE clause using AND
+        # If where_clause is empty, start with WHERE. Else append AND.
+        
+        month_condition = "strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?"
+        
+        if where_clause:
+            final_where = f"{where_clause} AND {month_condition}"
         else:
-            query = """
-                SELECT file_path, thumbnail_path 
-                FROM images
-                WHERE strftime('%Y-%m', datetime(last_modified, 'unixepoch')) = ?
-                ORDER BY last_modified DESC
-            """
-            self.cursor.execute(query, (month_str,))
+            final_where = f"WHERE {month_condition}"
+            
+        params.append(month_str)
+        
+        query = f"""
+            SELECT file_path, thumbnail_path 
+            FROM images
+            {final_where}
+            ORDER BY last_modified DESC
+        """
+        self.cursor.execute(query, params)
 
         return self.cursor.fetchall()

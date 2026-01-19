@@ -81,7 +81,7 @@ Item {
                     
                     // Date
                     MetadataRow {
-                         iconSource: "file:assets/icons/clock.svg"
+                         iconSource: "file:assets/icons/calendar-clock.svg"
                          text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.date : ""
                     }
 
