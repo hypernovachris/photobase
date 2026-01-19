@@ -29,12 +29,12 @@ Item {
                 width: scrollView.availableWidth - 40
                 spacing: 20
 
-                Label {
-                    text: "People"
-                    color: theme.textColor
-                    font.bold: true
-                    font.pixelSize: 32
-                }
+                // Label {
+                //     text: "People"
+                //     color: theme.textColor
+                //     font.bold: true
+                //     font.pixelSize: 32
+                // }
 
                 Flow {
                     width: parent.width

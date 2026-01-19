@@ -20,15 +20,15 @@ Item {
                 width: scrollView.availableWidth - 40
                 spacing: 20
 
-                Label {
-                    text: "Search"
-                    color: theme.textColor
-                    font.bold: true
-                    font.pixelSize: 32
-                }
+                // Label {
+                //     text: "Search"
+                //     color: theme.textColor
+                //     font.bold: true
+                //     font.pixelSize: 32
+                // }
 
                 Label {
-                    text: "Search View"
+                    text: "Coming soon..."
                     color: theme.textColor
                     Layout.alignment: Qt.AlignCenter
                     Layout.fillWidth: true

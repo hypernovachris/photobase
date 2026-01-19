@@ -24,28 +24,21 @@ Item {
                 width: scrollView.availableWidth - 40
                 spacing: 20
 
-                Label {
-                    text: "Settings"
-                    color: theme.textColor
-                    font.bold: true
-                    font.pixelSize: 32
-                }
-
                 // Appearance Section
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 10
                     Label {
                         text: "Appearance"
-                        font.bold: true
                         color: theme.textColor
-                        font.pixelSize: 18
+                        font.pixelSize: 20
                     }
 
-                    RowLayout {
+                    ColumnLayout {
                         Label {
-                            text: "Theme:"
+                            text: "Choose a color scheme for Photobase to use"
                             color: theme.textColor
+                            font.pixelSize: 14
                         }
                         ComboBox {
                             id: control
@@ -112,18 +105,17 @@ Item {
                     spacing: 10
                     Label {
                         text: "People"
-                        font.bold: true
                         color: theme.textColor
-                        font.pixelSize: 18
+                        font.pixelSize: 20
                     }
 
-                    RowLayout {
+                    ColumnLayout {
                         Layout.alignment: Qt.AlignLeft
                         spacing: 10
                         Label {
-                            text: "Scan for faces"
+                            text: "Choose whether Photobase should scan your images for faces in the background"
                             color: theme.textColor
-                            // Layout.fillWidth: true  <-- Removed to prevent pushing switch to right
+                            font.pixelSize: 14
                         }
 
                         Switch {   
@@ -138,12 +130,12 @@ Item {
                     }
                     
                     Label {
-                        text: "When this is enabled, Photobase will scan your images in the background for faces. Please note that this feature is currently slow and inaccurate."
+                        text: "Note: this feature is currently slow and inaccurate."
                         color: theme.textColor
                         font.pixelSize: 12
                         opacity: 0.7
                         wrapMode: Text.WordWrap
-                        Layout.fillWidth: true // Use Layout prop instead of explicit width
+                        Layout.fillWidth: true
                     }
                 }
 
@@ -154,14 +146,14 @@ Item {
 
                     Label {
                         text: "Gallery"
-                        font.bold: true
                         color: theme.textColor
-                        font.pixelSize: 18
+                        font.pixelSize: 20
                     }
                     
                     Label {
-                        text: "Add or remove directories Photobase should scan:"
+                        text: "Add or remove directories Photobase should scan"
                         color: theme.textColor
+                        font.pixelSize: 14
                     }
                     
                     // Container for List + Buttons
@@ -245,6 +237,7 @@ Item {
                                 Button {
                                     text: "Apply Changes"
                                     onClicked: settingsController.applyChanges()
+                                    implicitHeight: 20
                                 }
                             }
                         }
@@ -258,9 +251,8 @@ Item {
                     
                     Label {
                         text: "About"
-                        font.bold: true
                         color: theme.textColor
-                        font.pixelSize: 18
+                        font.pixelSize: 20
                     }
                     Item {
                         implicitWidth: aboutRow.implicitWidth
@@ -278,6 +270,7 @@ Item {
                                 text: "About Photobase"
                                 color: theme.textColor
                                 verticalAlignment: Text.AlignVCenter
+                                font.pixelSize: 14
                             }
 
                             // Link icon

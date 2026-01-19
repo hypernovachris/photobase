@@ -34,9 +34,19 @@ ApplicationWindow {
     header: TabBar {
         id: bar
         width: parent.width
+        spacing: 10
+        topPadding: 5
         
         background: Rectangle {
             color: theme.headerColor
+            // a 1px rectangle to add a border on the bottom
+            Rectangle {
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 1
+                color: theme.borderColor
+            }
         }
 
         contentItem: ListView {
@@ -46,6 +56,10 @@ ApplicationWindow {
             orientation: ListView.Horizontal
             boundsBehavior: Flickable.StopAtBounds
             flickableDirection: Flickable.AutoFlickIfNeeded
+            header: Item {
+                width: 10
+                height: parent.height
+            }
         }
 
         StyledTabButton {

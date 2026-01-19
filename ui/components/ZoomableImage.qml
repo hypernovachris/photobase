@@ -183,21 +183,22 @@ Item {
         }
 
         // Bar of buttons at the top
-        // Bar of buttons at the top
         Rectangle {
             height: 32
             width: buttonRow.implicitWidth + 20
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.topMargin: 20
-            visible: zoomableImageRoot.controlsVisible
+            visible: opacity > 0
+            opacity: zoomableImageRoot.controlsVisible ? 1.0 : 0.0
+            Behavior on opacity { NumberAnimation { duration: 200 } }
             radius: 10
             color: "#80000000"
             
             RowLayout {
                 id: buttonRow
                 anchors.centerIn: parent
-                spacing: 5
+                spacing: 4
                 // Reset Zoom (zoom to fit) Button
                 IconButton {
                     Layout.alignment: Qt.AlignVCenter
@@ -216,6 +217,15 @@ Item {
                         fixBounds()
                     }
                 }
+
+                // 1px divider rectangle
+                Rectangle {
+                    width: 1
+                    height: 20
+                    color: "white"
+                    opacity: 0.5
+                }
+
                 // 1:1 zoom button
                 IconButton {
                     Layout.alignment: Qt.AlignVCenter
@@ -237,8 +247,8 @@ Item {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: 20
-            visible: zoomableImageRoot.controlsVisible
-            opacity: visible ? 1.0 : 0.0
+            visible: opacity > 0
+            opacity: zoomableImageRoot.controlsVisible ? 1.0 : 0.0
             Behavior on opacity { NumberAnimation { duration: 200 } }
             
             Rectangle {
@@ -263,9 +273,9 @@ Item {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.rightMargin: 20
-            visible: zoomableImageRoot.controlsVisible
-            opacity: visible ? 1.0 : 0.0
-            Behavior on opacity { NumberAnimation { duration: 100 } }
+            visible: opacity > 0
+            opacity: zoomableImageRoot.controlsVisible ? 1.0 : 0.0
+            Behavior on opacity { NumberAnimation { duration: 200 } }
             
             Rectangle {
                 anchors.fill: parent

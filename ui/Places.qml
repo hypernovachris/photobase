@@ -20,15 +20,15 @@ Item {
                 width: scrollView.availableWidth - 40
                 spacing: 20
 
-                Label {
-                    text: "Places"
-                    color: theme.textColor
-                    font.bold: true
-                    font.pixelSize: 32
-                }
+                // Label {
+                //     text: "Places"
+                //     color: theme.textColor
+                //     font.bold: true
+                //     font.pixelSize: 32
+                // }
 
                 Label {
-                    text: "Places View"
+                    text: "Coming soon..."
                     color: theme.textColor
                     Layout.alignment: Qt.AlignCenter
                     Layout.fillWidth: true

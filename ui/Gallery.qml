@@ -57,10 +57,11 @@ Item {
                         }
 
                         Label {
-                            text: activeFilter !== "" ? activeFilter : "Gallery"
+                            text: activeFilter
                             color: theme.textColor
                             font.bold: true
                             font.pixelSize: 32
+                            visible: activeFilter !== ""
                         }
                     }
                 }
@@ -480,6 +481,20 @@ Item {
 
         height: 400
         property bool isAddMode: false
+    }
+
+    Rectangle {
+        id: titleShadow
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 10
+        z: 10
+        
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: theme.backgroundColor }
+            GradientStop { position: 1.0; color: "transparent" }
+        }
     }
 
     ImageViewer {
