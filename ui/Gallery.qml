@@ -5,11 +5,23 @@ import QtQuick.Effects
 import "components"
 
 Item {
+    id: root
+    focus: true
     onVisibleChanged: {
         if (visible) {
             delayedVisibilityCheckTimer.restart()
+            forceActiveFocus()
         }
     }
+    
+    Keys.onEscapePressed: (event) => {
+        if (activeFilter !== "") {
+            galleryModel.clear_tag_filter()
+            listView.positionViewAtIndex(0, ListView.Beginning)
+            event.accepted = true
+        }
+    }
+
     property string activeFilter: ""
     Connections {
         target: galleryModel
@@ -503,6 +515,7 @@ Item {
         onClosed: {
             listView.checkVisibility()
             // cleanup
+            root.forceActiveFocus()
         }
     }
 }

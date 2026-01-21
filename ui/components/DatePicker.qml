@@ -53,7 +53,7 @@ Item {
                     model: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
                     currentIndex: grid.month
                     font.bold: true
-                    font.pixelSize: 14
+                    font.pixelSize: 16
                     onActivated: (index) => grid.month = index
                 }
             }
@@ -69,15 +69,17 @@ Item {
                 
                 TextField {
                     text: grid.year
-                    font.bold: true
-                    font.pixelSize: 14
+                    font.pixelSize: 16
                     color: theme.textColor
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
                     selectByMouse: true
                     validator: IntValidator { bottom: 1; top: 9999 }
                     onEditingFinished: grid.year = parseInt(text)
-                    background: null
+                    background: Rectangle {
+                        color: theme.textFieldColor
+                        border.color: theme.borderColor
+                    }
                 }
             }
             IconButton {

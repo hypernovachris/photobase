@@ -417,8 +417,6 @@ Item {
                     radius: 5
                 }
             }
-            onRejected: stringDialog.close()
-            onAccepted: stringDialog.accept()
         }
 
         ColumnLayout {
@@ -427,14 +425,12 @@ Item {
                 id: stringInput
                 Layout.fillWidth: true
                 focus: true
-                // make the text match the theme
                 palette.text: theme.textColor
                 palette.placeholderText: theme.placeholderTextColor
                 background: Rectangle {
-                    color: "transparent"
+                    color: theme.textFieldColor
                     border.color: theme.borderColor
                     border.width: 1
-                    radius: 2
                 }
             }
         }

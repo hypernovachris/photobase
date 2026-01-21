@@ -93,7 +93,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: theme.backgroundColor
+                    color: theme.textFieldColor
                     border.color: theme.borderColor
                     topLeftRadius: 4
                     bottomLeftRadius: 4
@@ -126,7 +126,7 @@ Item {
                             delegate: Rectangle {
                                 height: 30
                                 width: chipRow.implicitWidth + 20
-                                color: theme.buttonColor
+                                color: theme.isDark ? theme.buttonColor : theme.backgroundColor
                                 radius: 15
                                 
                                 RowLayout {
@@ -161,9 +161,10 @@ Item {
                         clickable: false
                         // center in button
                         anchors.centerIn: parent
+                        color: "white"
                     }
                     background: Rectangle {
-                        color: theme.buttonColor
+                        color: theme.highlightColor
                         topRightRadius: 4
                         bottomRightRadius: 4
                     }
