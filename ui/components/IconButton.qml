@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Effects
 
 Item {
@@ -8,6 +7,8 @@ Item {
     // Public Properties
     property string source
     property int iconSize: 20
+    property int iconWidth: iconSize
+    property int iconHeight: iconSize
     property color color: theme.textColor
     property color hoverColor: theme.textColor // Optional hover color
     property alias cursorShape: mouseArea.cursorShape
@@ -18,15 +19,15 @@ Item {
     signal entered()
     signal exited()
     
-    // Size is determined by iconSize by default, but can be overridden
-    implicitWidth: iconSize
-    implicitHeight: iconSize
+    // Size is determined by iconWidth and iconHeight by default, but can be overridden
+    implicitWidth: iconWidth
+    implicitHeight: iconHeight
     
     Image {
         id: icon
         source: root.source
-        sourceSize.width: root.iconSize
-        sourceSize.height: root.iconSize
+        sourceSize.width: root.iconWidth
+        sourceSize.height: root.iconHeight
         visible: false
         anchors.centerIn: parent
     }

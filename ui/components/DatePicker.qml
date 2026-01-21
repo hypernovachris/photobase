@@ -30,55 +30,31 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             spacing: 0
-            
+            IconButton {
+                Layout.preferredWidth: 30
+                source: "file:assets/icons/arrow-left.svg"
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
+                onClicked: {
+                    if (grid.month === 0) {
+                        grid.month = 11
+                        grid.year -= 1
+                    } else {
+                        grid.month -= 1
+                    }
+                }
+            }
             // Month Navigation
             RowLayout {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 0 // Force equal 50% split (minus spacing)
                 spacing: 5
-                
-                Button {
-                    Layout.preferredWidth: 30
-                    IconButton {
-                        source: "file:assets/icons/arrow-left.svg"
-                        clickable: false
-                        color: "black"
-                        anchors.centerIn: parent
-                    }
-                    onClicked: {
-                        if (grid.month === 0) {
-                            grid.month = 11
-                            grid.year -= 1
-                        } else {
-                            grid.month -= 1
-                        }
-                    }
-                }
-                
-                Label {
-                    text: Qt.formatDate(new Date(grid.year, grid.month, 1), "MMMM")
+                StyledComboBox {
+                    Layout.fillWidth: true
+                    model: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                    currentIndex: grid.month
                     font.bold: true
                     font.pixelSize: 14
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                
-                Button {
-                    Layout.preferredWidth: 30
-                    IconButton {
-                        source: "file:assets/icons/arrow-right.svg"
-                        clickable: false
-                        color: "black"
-                        anchors.centerIn: parent
-                    }
-                    onClicked: {
-                        if (grid.month === 11) {
-                            grid.month = 0
-                            grid.year += 1
-                        } else {
-                            grid.month += 1
-                        }
-                    }
+                    onActivated: (index) => grid.month = index
                 }
             }
             
@@ -91,34 +67,30 @@ Item {
                 Layout.preferredWidth: 0 // Force equal 50% split (minus spacing)
                 spacing: 5
                 
-                Button {
-                    Layout.preferredWidth: 30
-                    IconButton {
-                        source: "file:assets/icons/arrow-left.svg"
-                        clickable: false
-                        color: "black"
-                        anchors.centerIn: parent
-                    }
-                    onClicked: grid.year -= 1
-                }
-                
-                Label {
+                TextField {
                     text: grid.year
                     font.bold: true
                     font.pixelSize: 14
+                    color: theme.textColor
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
+                    selectByMouse: true
+                    validator: IntValidator { bottom: 1; top: 9999 }
+                    onEditingFinished: grid.year = parseInt(text)
+                    background: null
                 }
-                
-                Button {
-                    Layout.preferredWidth: 30
-                    IconButton {
-                        source: "file:assets/icons/arrow-right.svg"
-                        clickable: false
-                        color: "black"
-                        anchors.centerIn: parent
+            }
+            IconButton {
+                Layout.preferredWidth: 30
+                source: "file:assets/icons/arrow-right.svg"
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                onClicked: {
+                    if (grid.month === 11) {
+                        grid.month = 0
+                        grid.year += 1
+                    } else {
+                        grid.month += 1
                     }
-                    onClicked: grid.year += 1
                 }
             }
         }
@@ -130,6 +102,7 @@ Item {
                 text: model.shortName
                 horizontalAlignment: Text.AlignHCenter
                 font.bold: true
+                color: theme.textColor
             }
         }
         
@@ -150,7 +123,7 @@ Item {
                     if (d.getDate() === s.getDate() && 
                         d.getMonth() === s.getMonth() && 
                         d.getFullYear() === s.getFullYear()) {
-                        return "#0077EE" // Highlight
+                        return theme.secondaryHighlightColor
                     }
                     return "transparent"
                 }
@@ -159,16 +132,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: model.day
-                    color: {
-                         var d = model.date
-                         var s = root.selectedDate
-                         if (d.getDate() === s.getDate() && 
-                             d.getMonth() === s.getMonth() && 
-                             d.getFullYear() === s.getFullYear()) {
-                             return "white"
-                         }
-                         return "black"
-                    }
+                    color: theme.textColor
                 }
                 
                 MouseArea {

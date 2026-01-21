@@ -7,6 +7,8 @@ RowLayout {
     property string text: ""
     property bool isLink: false
     property bool isUnavailable: text === "Unavailable" || text === ""
+    property int iconWidth: 20
+    property int iconHeight: 20
     
     signal linkActivated()
 
@@ -17,7 +19,8 @@ RowLayout {
     IconButton {
         clickable: false
         source: iconSource
-        iconSize: 20
+        iconWidth: parent.iconWidth
+        iconHeight: parent.iconHeight
     }
 
     Text {

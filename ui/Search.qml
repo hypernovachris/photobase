@@ -29,11 +29,11 @@ Item {
         
         if (type === "before") label = "Before " + value
         if (type === "since") label = "Since " + value
-        if (type === "camera") label = "Camera: " + value
-        if (type === "lens") label = "Lens: " + value
-        if (type === "folder") label = "Folder: " + value
-        if (type === "extension") label = "Ext: " + value
-        if (type === "filename") label = "Filename: " + value
+        if (type === "camera") label = "Camera: \"" + value + "\""
+        if (type === "lens") label = "Lens: \"" + value + "\""
+        if (type === "folder") label = "In folder: \"" + value + "\""
+        if (type === "extension") label = "Extension: " + value.toUpperCase()
+        if (type === "filename") label = "Filename: starts with \"" + value + "\""
 
         activeFiltersModel.append({
             "type": type,
@@ -177,13 +177,14 @@ Item {
         // 2. Filter Controls Area
         Rectangle {
             Layout.fillWidth: true
-            implicitHeight: filterGrid.implicitHeight + 40
+            implicitHeight: filtersColumn.implicitHeight + 40
             color: theme.backgroundColor
             
             ColumnLayout {
+                id: filtersColumn
                 anchors.fill: parent
                 anchors.margins: 20
-                spacing: 15
+                spacing: 20 // Increased spacing between sections
                 
                 RowLayout {
                     Layout.fillWidth: true
@@ -219,43 +220,81 @@ Item {
                     height: 1
                     color: theme.borderColor
                 }
+
+                // Shared Components
                 
-                Flow {
-                    id: filterGrid
+                component FilterButton: Button {
+                    height: 30
+                    leftPadding: 15
+                    rightPadding: 15
+                    background: Rectangle {
+                        color: theme.buttonColor
+                        radius: 15
+                    }
+                    palette.buttonText: theme.textColor
+                }
+
+                component FilterSection: Flow {
                     Layout.fillWidth: true
                     spacing: 10
-                    
-                    // Button Factory
-                    component FilterButton: Button {
-                        // width: implicitWidth  // Let it size to content
-                        height: 30
-                        leftPadding: 15
-                        rightPadding: 15
-                        
-                        background: Rectangle {
-                            color: theme.buttonColor
-                            radius: 15
-                        }
-                        contentItem: Text {
-                            text: parent.text
-                            color: theme.textColor
-                            horizontalAlignment: Text.AlignLeft
-                            verticalAlignment: Text.AlignVCenter
-                        }
+                }
+                
+                GridLayout {
+                    columns: 2
+                    Layout.fillWidth: true
+                    columnSpacing: 10
+                    rowSpacing: 20
+
+                    IconButton {
+                        source: "file:assets/icons/calendar.svg"
+                        clickable: false
+                        Layout.alignment: Qt.AlignTop
+                        Layout.topMargin: 5
                     }
 
-                    FilterButton { text: "Before date"; onClicked: filterDialogs.openDateBeforeDialog() }
-                    FilterButton { text: "Since date"; onClicked: filterDialogs.openDateSinceDialog() }
-                    FilterButton { text: "Between dates"; onClicked: filterDialogs.openDateBetweenDialog() }
-                    FilterButton { text: "Has tag"; onClicked: filterDialogs.openTagDialog() }
+                    FilterSection {
+                        FilterButton { text: "Before date"; onClicked: filterDialogs.openDateBeforeDialog()}
+                        FilterButton { text: "Since date"; onClicked: filterDialogs.openDateSinceDialog()}
+                        FilterButton { text: "Between dates"; onClicked: filterDialogs.openDateBetweenDialog()}
+                    }
 
-                    FilterButton { text: "Taken with camera"; onClicked: filterDialogs.openCameraDialog() }
-                    FilterButton { text: "Taken with lens"; onClicked: filterDialogs.openLensDialog() }
-            
-                    FilterButton { text: "In folder"; onClicked: filterDialogs.openFolderDialog() }
-                    FilterButton { text: "Has file extension"; onClicked: filterDialogs.openExtensionDialog() }
-                    FilterButton { text: "Filename starts with"; onClicked: filterDialogs.openFilenameDialog() }
+                    IconButton {
+                        source: "file:assets/icons/camera.svg"
+                        clickable: false
+                        Layout.alignment: Qt.AlignTop
+                        Layout.topMargin: 5
+                    }
+
+                    FilterSection {
+                        FilterButton { text: "Taken with camera"; onClicked: filterDialogs.openCameraDialog()}
+                        FilterButton { text: "Taken with lens"; onClicked: filterDialogs.openLensDialog()}
+                    }
+
+                    IconButton {
+                        source: "file:assets/icons/folder.svg"
+                        clickable: false
+                        Layout.alignment: Qt.AlignTop
+                        Layout.topMargin: 5
+                    }
+
+                    FilterSection {
+                        FilterButton { text: "In folder"; onClicked: filterDialogs.openFolderDialog()}
+                        FilterButton { text: "Has file extension"; onClicked: filterDialogs.openExtensionDialog()}
+                        FilterButton { text: "Filename starts with"; onClicked: filterDialogs.openFilenameDialog()}
+                    }
+                    
+                    IconButton {
+                        source: "file:assets/icons/tag.svg"
+                        clickable: false
+                        Layout.alignment: Qt.AlignTop
+                        Layout.topMargin: 5
+                    }
+
+                    FilterSection {
+                        FilterButton { text: "Has tag"; onClicked: filterDialogs.openTagDialog()}
+                    }
                 }
+
             }
         }
         

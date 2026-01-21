@@ -44,7 +44,7 @@ Flow {
                 
                 Text {
                     text: modelData
-                    color: theme.buttonTextColor
+                    color: theme.textColor
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 
@@ -54,7 +54,7 @@ Flow {
                     iconSize: 16
                     anchors.verticalCenter: parent.verticalCenter
                     source: "file:assets/icons/x.svg"
-                    color: theme.buttonTextColor
+                    color: theme.textColor
                     onClicked: removeTagRequested(modelData)
                 }
             }

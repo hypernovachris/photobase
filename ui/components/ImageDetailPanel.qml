@@ -104,6 +104,7 @@ Item {
                         MetadataRow {
                             iconSource: "file:assets/icons/noun-lens-8154880.svg"
                             text: detailPanelRoot.currentImageDetails ? detailPanelRoot.currentImageDetails.lens : ""
+                            iconHeight: 25
                         }
                         
                         // EXIF Data

@@ -31,7 +31,7 @@ Item {
                     Label {
                         text: "Appearance"
                         color: theme.textColor
-                        font.pixelSize: 20
+                        font.pixelSize: 24
                     }
 
                     ColumnLayout {
@@ -40,60 +40,12 @@ Item {
                             color: theme.textColor
                             font.pixelSize: 14
                         }
-                        ComboBox {
+                        StyledComboBox {
                             id: control
                             model: ["System", "Normal", "Dark"]
                             currentIndex: model.indexOf(settingsController.theme)
                             onActivated: (index) => {
                                 settingsController.theme = model[index]
-                            }
-
-                            indicator: Item {
-                                x: control.width - width - 10
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: 20
-                                height: 20
-                                Image {
-                                    id: arrowIcon
-                                    source: "file:assets/icons/chevron-down.svg"
-                                    visible: false
-                                }
-                                MultiEffect {
-                                    source: arrowIcon
-                                    anchors.fill: parent
-                                    colorization: 1.0
-                                    colorizationColor: theme.buttonTextColor
-                                }
-                            }
-                            
-                            delegate: ItemDelegate {
-                                width: parent.width
-                                text: modelData
-                                contentItem: Text {
-                                    text: modelData
-                                    color: theme.textColor
-                                    elide: Text.ElideRight
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                background: Rectangle {
-                                    color: highlighted ? theme.highlightColor : theme.buttonColor
-                                }
-                                highlighted: ListView.isCurrentItem
-                            }
-                            
-                            contentItem: Text {
-                                leftPadding: 10
-                                rightPadding: control.indicator.width + control.spacing + 10
-                                topPadding: 10
-                                bottomPadding: 10
-                                text: parent.displayText
-                                color: theme.textColor
-                                verticalAlignment: Text.AlignVCenter
-                            }
-                            
-                            background: Rectangle {
-                                color: theme.buttonColor
-                                border.color: theme.borderColor
                             }
                         }
                     }
@@ -107,7 +59,7 @@ Item {
                     Label {
                         text: "Gallery"
                         color: theme.textColor
-                        font.pixelSize: 20
+                        font.pixelSize: 24
                     }
                     
                     Label {
@@ -122,7 +74,7 @@ Item {
                         height: 300 // Fixed height for the editor area as per typical usage, or could be flexible
                         color: theme.isDark ? "#1e1e1e" : "#f5f5f5" // Tinted background
                         border.color: theme.borderColor
-                        radius: 4
+                        radius: 5
                         
                         ColumnLayout {
                             anchors.fill: parent
@@ -148,14 +100,12 @@ Item {
                                     highlighted: ListView.isCurrentItem
                                     onClicked: pathsList.currentIndex = index
                                     background: Rectangle {
-                                        color: highlighted ? theme.highlightColor : "transparent"
-                                        opacity: highlighted ? 0.3 : 1.0
+                                        color: highlighted ? theme.secondaryHighlightColor : "transparent"
                                     }
                                 }
                                 
                                 highlight: Rectangle {
-                                    color: theme.highlightColor
-                                    opacity: 0.2
+                                    color: theme.secondaryHighlightColor
                                 }
                                 highlightMoveDuration: 0
                             }
@@ -170,7 +120,7 @@ Item {
                                     height: 20
                                     Layout.alignment: Qt.AlignBottom
                                     source: "file:assets/icons/plus.svg"
-                                    color: theme.buttonTextColor
+                                    color: theme.textColor
                                     onClicked: settingsController.addPath()
                                 }
 
@@ -180,7 +130,7 @@ Item {
                                     height: 20
                                     Layout.alignment: Qt.AlignBottom
                                     source: "file:assets/icons/minus.svg"
-                                    color: theme.buttonTextColor
+                                    color: theme.textColor
                                     onClicked: {
                                         if (pathsList.currentIndex >= 0) {
                                             settingsController.removePath(pathsList.currentIndex)
@@ -196,8 +146,13 @@ Item {
                                 // Apply Changes button
                                 Button {
                                     text: "Apply Changes"
+                                    palette.buttonText: theme.textColor
+                                    background: Rectangle {
+                                        color: theme.buttonColor
+                                        radius: 5
+                                    }
+
                                     onClicked: settingsController.applyChanges()
-                                    implicitHeight: 20
                                 }
                             }
                         }
@@ -212,7 +167,7 @@ Item {
                     Label {
                         text: "About"
                         color: theme.textColor
-                        font.pixelSize: 20
+                        font.pixelSize: 24
                     }
                     Item {
                         implicitWidth: aboutRow.implicitWidth
