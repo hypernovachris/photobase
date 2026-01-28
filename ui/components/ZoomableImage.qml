@@ -180,6 +180,12 @@ Item {
                     }
                 }
             }
+
+            BusyIndicator {
+                anchors.centerIn: parent
+                running: mainImage.status === Image.Loading
+                visible: running
+            }
         }
 
         // Bar of buttons at the top
