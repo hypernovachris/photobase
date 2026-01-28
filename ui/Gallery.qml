@@ -445,22 +445,54 @@ Item {
     }
     
     // Context Menu
+    component StyledMenuItem: MenuItem {
+        id: menuItem
+        
+        background: Rectangle {
+            implicitWidth: 200
+            implicitHeight: 22
+            color: menuItem.highlighted ? theme.highlightColor : "transparent"
+            radius: 4
+        }
+        
+        contentItem: Text {
+            text: menuItem.text
+            font.pixelSize: 12 // Standard UI size
+            color: menuItem.highlighted ? "#ffffff" : theme.textColor
+            verticalAlignment: Text.AlignVCenter
+            leftPadding: 10
+        }
+    }
+
     Menu {
         id: contextMenu
-        MenuItem {
+        
+        background: Rectangle {
+            implicitWidth: 200
+            color: theme.buttonColor
+            border.color: theme.borderColor
+            border.width: 1
+            radius: 4
+        }
+    
+        StyledMenuItem {
             text: "Open"
+            visible: listView.selectedPaths.length === 1
+            height: visible ? implicitHeight : 0
             onTriggered: {
                 var paths = galleryModel.get_selected_paths()
                  for (var i = 0; i < paths.length; i++) {
-                     // galleryModel.open_file(paths[i])
-                     imageViewer.open(paths[i])
+                     galleryModel.open_file(paths[i])
+                     // imageViewer.open(paths[i])
                      // Only open the first one for now in viewer to avoid spamming or logic complexity
                      break; 
                  }
             }
         }
-        MenuItem {
+        StyledMenuItem {
             text: "Reveal in File Explorer"
+            visible: listView.selectedPaths.length === 1
+            height: visible ? implicitHeight : 0
             onTriggered: {
                 var paths = galleryModel.get_selected_paths()
                  for (var i = 0; i < paths.length; i++) {
@@ -468,7 +500,7 @@ Item {
                  }
             }
         }
-        MenuItem {
+        StyledMenuItem {
             text: listView.selectedPaths.length > 1 ? "Add Tag" : "Edit Tags"
             enabled: listView.selectedPaths.length > 0
             onTriggered: {
@@ -476,7 +508,7 @@ Item {
                 tagDialog.open()
             }
         }
-        MenuItem {
+        StyledMenuItem {
             text: "Remove from '" + activeFilter + "'"
             visible: activeFilter !== "" && listView.selectedPaths.length > 0
             height: visible ? implicitHeight : 0
