@@ -257,12 +257,13 @@ class GalleryModel(QAbstractListModel):
                          img_id = db.images.get_image_id(path)
                          if img_id:
                              db.tags.remove_tag_from_image(img_id, tag_id)
-                 self.tagsChanged.emit()
-
+        
         db.commit()
-        # Refresh the view because items might no longer belong to the filter
-        self.load_images() 
         db.close()
+
+        self.tagsChanged.emit()
+        # Refresh the view because items might no longer belong to the filter
+        self.load_images()
 
     @pyqtSlot(str)
     def remove_tag_from_selection(self, tag_name):

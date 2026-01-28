@@ -282,6 +282,12 @@ Item {
                             anchors.left: parent.left
                             anchors.leftMargin: (parent.width - gridWidth) / 2
                             verticalAlignment: Text.AlignVCenter
+                            Behavior on anchors.leftMargin {
+                                NumberAnimation {
+                                    duration: 200
+                                    easing.type: Easing.OutQuad
+                                }
+                            }
                         }
                         
                         Flow {
@@ -504,7 +510,9 @@ Item {
             text: listView.selectedPaths.length > 1 ? "Add Tag" : "Edit Tags"
             enabled: listView.selectedPaths.length > 0
             onTriggered: {
-                tagDialog.isAddMode = listView.selectedPaths.length > 1
+                var isMulti = listView.selectedPaths.length > 1
+                tagDialog.isAddMode = isMulti
+                tagDialog.targetPath = isMulti ? "" : listView.selectedPaths[0]
                 tagDialog.open()
             }
         }
@@ -525,7 +533,6 @@ Item {
         width: 300
 
         height: 400
-        property bool isAddMode: false
     }
     ImageViewer {
         id: imageViewer

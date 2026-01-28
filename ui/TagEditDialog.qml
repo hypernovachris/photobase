@@ -1,13 +1,12 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "components"
 
 Dialog {
     id: tagDialog
     property bool isAddMode: false
-    title: isAddMode ? "Add Tag" : "Edit Tags"
     modal: true
-    standardButtons: Dialog.Ok | Dialog.Cancel
     
     property var allTags: []
     property var commonTags: []
@@ -66,6 +65,31 @@ Dialog {
         tagList.model = allTags // Refresh list
     }
 
+    background: Rectangle {
+        color: theme.borderColor
+        radius: 10
+        Rectangle {
+            anchors.fill: parent
+            anchors.leftMargin: 1
+            anchors.rightMargin: 1
+            anchors.topMargin: 1
+            anchors.bottomMargin: 1
+            color: theme.backgroundColor
+            radius: 9
+        }
+    }
+
+    header: Label {
+        text: isAddMode ? "Add Tags" : "Edit Tags"
+        font.pixelSize: 14
+        color: theme.textColor
+        padding: 10
+        horizontalAlignment: Text.AlignHCenter
+        background: Rectangle {
+            color: "transparent"
+        }
+    }
+
     ColumnLayout {
         spacing: 10
         anchors.fill: parent
@@ -76,13 +100,22 @@ Dialog {
             TextField {
                 id: newTagField
                 placeholderText: "New Tag Name"
+                // change placeholder text color
+                placeholderTextColor: theme.secondaryTextColor
                 Layout.fillWidth: true
                 onAccepted: addBtn.clicked()
+                color: theme.textColor
+                background: Rectangle {
+                    color: theme.textFieldColor
+                    border.color: theme.borderColor
+                }
             }
-            Button {
+            StandardButton {
                 id: addBtn
                 text: "Add"
                 enabled: newTagField.text.trim().length > 0
+                height: newTagField.height // why won't this work?
+
                 onClicked: {
                     var name = newTagField.text.trim()
                     if (name) {
@@ -101,6 +134,7 @@ Dialog {
         Label {
             text: "Select tags to apply:"
             font.bold: true
+            color: theme.textColor
         }
 
         ScrollView {
@@ -112,7 +146,7 @@ Dialog {
             ListView {
                 id: tagList
                 model: allTags
-                delegate: CheckBox {
+                delegate: StyledCheckBox {
                     text: modelData
                     checked: tagsState[modelData] === true
                     onClicked: {
@@ -120,6 +154,21 @@ Dialog {
                     }
                 }
             }
+        }
+    }
+
+    footer: DialogButtonBox {
+        background: Rectangle {
+            color: "transparent"
+        }
+        spacing: 10
+        StandardButton {
+            text: "Cancel"
+            DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+        }
+        StandardButton {
+            text: "OK"
+            DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
         }
     }
 }

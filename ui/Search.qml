@@ -72,9 +72,14 @@ Item {
 
     // --- Main Layout ---
     
-    ColumnLayout {
+    ScrollView {
+        id: scrollView
         anchors.fill: parent
-        spacing: 0
+        clip: true
+
+        ColumnLayout {
+            width: scrollView.availableWidth
+            spacing: 0
 
         // 1. Search Bar Area
         Rectangle {
@@ -305,10 +310,6 @@ Item {
             }
         }
         
-        // Spacer for remaining height
-        Item { 
-            Layout.fillWidth: true 
-            Layout.fillHeight: true 
         }
     }
 }

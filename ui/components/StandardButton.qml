@@ -18,8 +18,8 @@ Button {
     }
 
     background: Rectangle {
-        implicitWidth: 80
-        implicitHeight: 24
+        // make it fill parent
+        anchors.fill: parent
         radius: 4
         id: backgroundRect
         
