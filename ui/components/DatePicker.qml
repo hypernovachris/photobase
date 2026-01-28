@@ -106,6 +106,13 @@ Item {
                 font.bold: true
                 color: theme.textColor
             }
+            Rectangle {
+                color: theme.textFieldColor
+                anchors.fill: parent
+                anchors.bottomMargin: -10
+                anchors.leftMargin: -11
+                anchors.rightMargin: -11
+            }
         }
         
         // Month Grid
@@ -116,6 +123,13 @@ Item {
             
             month: new Date().getMonth()
             year: new Date().getFullYear()
+
+            Rectangle {
+                color: theme.textFieldColor
+                anchors.fill: parent
+                anchors.leftMargin: -11
+                anchors.rightMargin: -11
+            }
             
             delegate: Rectangle {
                 opacity: model.month === grid.month ? 1 : 0.3

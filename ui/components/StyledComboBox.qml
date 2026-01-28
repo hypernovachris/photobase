@@ -59,11 +59,10 @@ ComboBox {
         }
         background: Rectangle {
             color: highlighted ? theme.secondaryHighlightColor : theme.buttonColor
-            radius: 5
             topLeftRadius: 0
             topRightRadius: 0
-            bottomLeftRadius: (index === control.count - 1) ? 5 : 0
-            bottomRightRadius: (index === control.count - 1) ? 5 : 0
+            bottomLeftRadius: (index === control.count - 1) ? 4 : 0
+            bottomRightRadius: (index === control.count - 1) ? 4 : 0
         }
         highlighted: ListView.isCurrentItem
     }
@@ -79,7 +78,12 @@ ComboBox {
     }
     
     background: Rectangle {
-        color: theme.buttonColor
+        id: backgroundRect
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: control.down ? theme.buttonPressedStart : Qt.tint(theme.buttonGradientStart, Qt.alpha(theme.bevelLight, 0.7)) }
+            GradientStop { position: 2.0 / backgroundRect.height; color: control.down ? theme.buttonPressedStart : theme.buttonGradientStart }
+            GradientStop { position: 1.0; color: control.down ? theme.buttonPressedEnd : theme.buttonGradientEnd }
+        }
         border.color: theme.borderColor
         radius: 5
         bottomRightRadius: down ? 0 : 5

@@ -22,23 +22,33 @@ TabButton {
     rightPadding: 20
 
     // Custom background
-    background: Rectangle {
-        topLeftRadius: 2
-        topRightRadius: 2
+    background: Rectangle { // Main container / Border
+        topLeftRadius: 4
+        topRightRadius: 4
         color: theme.borderColor
-        opacity: control.checked ? 1.0 : 0.5
-        implicitHeight: 16
+        
+        // Ensure inactive tabs look "behind" or lower
+        height: control.checked ? parent.height : parent.height - 2
+        anchors.bottom: parent.bottom
 
-        // inner rectangle to create effect of border on top, left, and right:
+        // Inner Gradient Background
         Rectangle {
+            id: innerGradient
             anchors.fill: parent
-            anchors.topMargin: 1
             anchors.leftMargin: 1
             anchors.rightMargin: 1
-            anchors.bottomMargin: control.checked ? 0 : 1
-            topLeftRadius: 2
-            topRightRadius: 2
-            color: control.checked ? theme.backgroundColor : theme.headerColor
+            anchors.topMargin: 1
+            // If checked, connect to content (no bottom border). If unchecked, show bottom border.
+            anchors.bottomMargin: 1 
+            
+            topLeftRadius: 3
+            topRightRadius: 3
+            
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: control.checked ? Qt.tint(theme.buttonGradientStart, Qt.alpha(theme.bevelLight, 0.7)) : theme.headerGradientEnd }
+                GradientStop { position: 2.0 / innerGradient.height; color: control.checked ? theme.buttonGradientStart : theme.headerGradientEnd }
+                GradientStop { position: 1.0; color: control.checked ? theme.backgroundColor : theme.headerGradientEnd }
+            }
         }
     }
 }

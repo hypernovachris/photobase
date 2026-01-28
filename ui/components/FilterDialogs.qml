@@ -74,7 +74,7 @@ Item {
                 return "Since Date"
             }
             color: theme.textColor
-            font.bold: true
+            font.pixelSize: 14
             padding: 10
             horizontalAlignment: Text.AlignHCenter
             background: Rectangle {
@@ -136,23 +136,16 @@ Item {
                 color: "transparent"
             }
             spacing: 10
-            Button {
+            StandardButton {
                 text: "Cancel"
                 DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-                palette.buttonText: theme.textColor
-                background: Rectangle {
-                    color: theme.buttonColor
-                    radius: 5
-                }
             }
-            Button {
+            Item {
+                Layout.fillWidth: true
+            }
+            StandardButton {
                 text: "OK"
                 DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
-                palette.buttonText: theme.textColor
-                background: Rectangle {
-                    color: theme.buttonColor
-                    radius: 5
-                }
             }
         }
 
@@ -186,7 +179,7 @@ Item {
         header: Label {
             text: "Between Dates"
             color: theme.textColor
-            font.bold: true
+            font.pixelSize: 14
             padding: 10
             horizontalAlignment: Text.AlignHCenter
             background: Rectangle {
@@ -206,14 +199,9 @@ Item {
                     color: theme.textColor
                     Layout.preferredWidth: 80
                 }
-                Button {
+                StandardButton {
                     text: Qt.formatDate(betweenDialog.startDate, "yyyy-MM-dd")
                     Layout.fillWidth: true
-                    palette.buttonText: theme.textColor
-                    background: Rectangle {
-                        color: theme.buttonColor
-                        radius: 5
-                    }
                     onClicked: {
                         dateDialog.customTitle = "Select Start Date"
                         dateDialog.pendingDate = betweenDialog.startDate
@@ -232,14 +220,9 @@ Item {
                     color: theme.textColor
                     Layout.preferredWidth: 80
                 }
-                Button {
+                StandardButton {
                     text: Qt.formatDate(betweenDialog.endDate, "yyyy-MM-dd")
                     Layout.fillWidth: true
-                    palette.buttonText: theme.textColor
-                    background: Rectangle {
-                        color: theme.buttonColor
-                        radius: 5
-                    }
                     onClicked: {
                         dateDialog.customTitle = "Select End Date"
                         dateDialog.pendingDate = betweenDialog.endDate
@@ -257,23 +240,13 @@ Item {
                 color: "transparent"
             }
             spacing: 10
-            Button {
+            StandardButton {
                 text: "Cancel"
                 DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-                palette.buttonText: theme.textColor
-                background: Rectangle {
-                    color: theme.buttonColor
-                    radius: 5
-                }
             }
-            Button {
+            StandardButton {
                 text: "OK"
                 DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
-                palette.buttonText: theme.textColor
-                background: Rectangle {
-                    color: theme.buttonColor
-                    radius: 5
-                }
             }
             onAccepted: {
                 var startStr = Qt.formatDate(betweenDialog.startDate, "yyyy-MM-dd")
@@ -283,13 +256,16 @@ Item {
         }
     }
 
-    // --- Generic List Selection Dialog (Camera/Lens) ---
+    // --- Generic List Selection Dialog (Camera/Lens/Tag) ---
     Dialog {
         id: listSelectionDialog
         anchors.centerIn: Overlay.overlay
         width: 300
         height: 400
         modal: true
+
+        leftPadding: 0
+        rightPadding: 0
 
         property var modelData: []
         property string mode: ""
@@ -323,29 +299,41 @@ Item {
             background: Rectangle {
                 color: "transparent"
             }
-            Button {
+            StandardButton {
                 text: "Cancel"
                 DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-                palette.buttonText: theme.textColor
-                background: Rectangle {
-                    color: theme.buttonColor
-                    radius: 5
-                }
             }
             onRejected: listSelectionDialog.close()
         }
         
+        // Background for the list area
+        Rectangle {
+            anchors.fill: parent
+            color: theme.textFieldColor
+            // Add a border if needed, or rely on the dialog's border
+        }
+
         ListView {
             id: listSelectionListView
             anchors.fill: parent
             model: listSelectionDialog.modelData
             clip: true
-            spacing: 5
+            spacing: 0 // Tighter spacing
             
             delegate: ItemDelegate {
                 text: modelData
                 palette.text: theme.textColor
                 width: ListView.view.width
+                
+                contentItem: Text {
+                    text: parent.text
+                    color: theme.textColor
+                    font: parent.font
+                    elide: Text.ElideRight
+                    verticalAlignment: Text.AlignVCenter
+                    leftPadding: 10
+                }
+
                 onClicked: {
                     root.filterAdded(listSelectionDialog.mode, modelData)
                     listSelectionDialog.close()
@@ -353,8 +341,16 @@ Item {
                 // background rectangle
                 background: Rectangle {
                     anchors.fill: parent
-                    color: theme.buttonColor
-                    radius: 5
+                    color: parent.down ? theme.buttonPressedStart : (parent.hovered ? theme.buttonColor : "transparent")
+                    
+                    // Separator line
+                    Rectangle {
+                        width: parent.width
+                        height: 1
+                        color: theme.secondaryTextColor
+                        opacity: 0.3
+                        anchors.bottom: parent.bottom
+                    }
                 }
             }
         }
@@ -399,23 +395,13 @@ Item {
                 color: "transparent"
             }
             spacing: 10
-            Button {
+            StandardButton {
                 text: "Cancel"
                 DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
-                palette.buttonText: theme.textColor
-                background: Rectangle {
-                    color: theme.buttonColor
-                    radius: 5
-                }
             }
-            Button {
+            StandardButton {
                 text: "OK"
                 DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
-                palette.buttonText: theme.textColor
-                background: Rectangle {
-                    color: theme.buttonColor
-                    radius: 5
-                }
             }
         }
 

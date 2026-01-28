@@ -38,14 +38,35 @@ ApplicationWindow {
         topPadding: 5
         
         background: Rectangle {
-            color: theme.headerColor
-            // a 1px rectangle to add a border on the bottom
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: theme.headerGradientStart }
+                GradientStop { position: 1.0; color: theme.headerGradientEnd }
+            }
+            
+            // Bottom Border
             Rectangle {
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
                 height: 1
                 color: theme.borderColor
+            }
+            
+            // Drop Shadow (Simple gradient rect below the header)
+            Rectangle {
+                id: headerShadow
+                // Anchored to the bottom of the header background
+                anchors.top: parent.bottom
+                // Hide shadow when image viewer is open to prevent it from overlaying the image
+                visible: !galleryView.isImageViewerVisible
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 5
+                z: 10 // On top of content
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: theme.shadowColor }
+                    GradientStop { position: 1.0; color: "transparent" }
+                }
             }
         }
 
@@ -84,6 +105,7 @@ ApplicationWindow {
         currentIndex: bar.currentIndex
 
         Gallery {
+            id: galleryView
         }
         Tags {
         }

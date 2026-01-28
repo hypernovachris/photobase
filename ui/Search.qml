@@ -229,8 +229,14 @@ Item {
                     leftPadding: 15
                     rightPadding: 15
                     background: Rectangle {
-                        color: theme.buttonColor
+                        id: backgroundRect
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: Qt.tint(theme.buttonGradientStart, Qt.alpha(theme.bevelLight, 0.7)) }
+                            GradientStop { position: 2.0 / backgroundRect.height; color: theme.buttonGradientStart }
+                            GradientStop { position: 1.0; color: theme.buttonGradientEnd }
+                        }
                         radius: 15
+                        border.color: theme.borderColor
                     }
                     palette.buttonText: theme.textColor
                 }

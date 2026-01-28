@@ -144,14 +144,8 @@ Item {
                                 }
 
                                 // Apply Changes button
-                                Button {
+                                StandardButton {
                                     text: "Apply Changes"
-                                    palette.buttonText: theme.textColor
-                                    background: Rectangle {
-                                        color: theme.buttonColor
-                                        radius: 5
-                                    }
-
                                     onClicked: settingsController.applyChanges()
                                 }
                             }

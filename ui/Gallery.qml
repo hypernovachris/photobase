@@ -23,6 +23,7 @@ Item {
     }
 
     property string activeFilter: ""
+    readonly property alias isImageViewerVisible: imageViewer.visible
     Connections {
         target: galleryModel
         function onFilterChanged(tagName) {
@@ -88,21 +89,21 @@ Item {
                 
                 onContentYChanged: {
                     isScrolling = true
-                    if (!scrollCheckTimer.running) {
-                        scrollCheckTimer.start()
-                    }
+                    // if (!scrollCheckTimer.running) {
+                    //     scrollCheckTimer.start()
+                    // }
                     scrollStopTimer.restart()
                 }
                 
                 property var selectedPaths: []
                 
                 // Periodically check visibility while scrolling
-                Timer {
-                    id: scrollCheckTimer
-                    interval: 200
-                    repeat: true
-                    onTriggered: listView.checkVisibility()
-                }
+                // Timer {
+                //     id: scrollCheckTimer
+                //     interval: 200
+                //     repeat: true
+                //     onTriggered: listView.checkVisibility()
+                // }
                 
                 
                 Timer {
@@ -119,7 +120,7 @@ Item {
                     repeat: false
                     onTriggered: {
                         listView.isScrolling = false
-                        scrollCheckTimer.stop()
+                        // scrollCheckTimer.stop()
                         listView.checkVisibility()
                         delayedVisibilityCheckTimer.restart()
                     }
@@ -224,17 +225,17 @@ Item {
                     recalculateGeometry()
                     updateQueueLimit()
                     listView.isScrolling = true
-                    if (!scrollCheckTimer.running) {
-                        scrollCheckTimer.start()
-                    }
+                    // if (!scrollCheckTimer.running) {
+                    //     scrollCheckTimer.start()
+                    // }
                     scrollStopTimer.restart()
                 }
                 onHeightChanged: {
                     updateQueueLimit()
                     listView.isScrolling = true
-                    if (!scrollCheckTimer.running) {
-                        scrollCheckTimer.start()
-                    }
+                    // if (!scrollCheckTimer.running) {
+                    //     scrollCheckTimer.start()
+                    // }
                     scrollStopTimer.restart()
                 }
                 
@@ -494,21 +495,6 @@ Item {
         height: 400
         property bool isAddMode: false
     }
-
-    Rectangle {
-        id: titleShadow
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 10
-        z: 10
-        
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: theme.backgroundColor }
-            GradientStop { position: 1.0; color: "transparent" }
-        }
-    }
-
     ImageViewer {
         id: imageViewer
         z: 100 // Ensure it is on top
