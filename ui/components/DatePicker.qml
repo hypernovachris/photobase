@@ -48,7 +48,7 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredWidth: 0 // Force equal 50% split (minus spacing)
                 spacing: 5
-                StyledComboBox {
+                ComboBox {
                     Layout.fillWidth: true
                     model: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
                     currentIndex: grid.month
@@ -77,7 +77,7 @@ Item {
                     validator: IntValidator { bottom: 1; top: 9999 }
                     onEditingFinished: grid.year = parseInt(text)
                     background: Rectangle {
-                        color: theme.textFieldColor
+                        color: theme.secondaryBackgroundColor
                         border.color: theme.borderColor
                     }
                 }
@@ -107,7 +107,7 @@ Item {
                 color: theme.textColor
             }
             Rectangle {
-                color: theme.textFieldColor
+                color: theme.secondaryBackgroundColor
                 anchors.fill: parent
                 anchors.bottomMargin: -10
                 anchors.leftMargin: -11
@@ -125,7 +125,7 @@ Item {
             year: new Date().getFullYear()
 
             Rectangle {
-                color: theme.textFieldColor
+                color: theme.secondaryBackgroundColor
                 anchors.fill: parent
                 anchors.leftMargin: -11
                 anchors.rightMargin: -11
@@ -143,7 +143,6 @@ Item {
                     }
                     return "transparent"
                 }
-                radius: 4
                 
                 Text {
                     anchors.centerIn: parent

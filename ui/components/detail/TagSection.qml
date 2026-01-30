@@ -33,8 +33,7 @@ Flow {
         delegate: Rectangle {
             height: 30
             width: tagRow.implicitWidth + 10
-            radius: 15
-            color: theme.buttonColor
+            border.color: theme.borderColor
             
             Row {
                 id: tagRow

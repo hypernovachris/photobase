@@ -19,28 +19,24 @@ Item {
 
             ColumnLayout {
                 id: settingsContent
-                x: 20
-                y: 20
-                width: scrollView.availableWidth - 40
-                spacing: 20
+                x: theme.paddingMedium
+                y: theme.paddingMedium
+                width: scrollView.availableWidth - (theme.paddingMedium * 2)
+                spacing: theme.spacingLarge
 
                 // Appearance Section
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 10
-                    Label {
+                    spacing: theme.spacingMedium
+                    Header {
                         text: "Appearance"
-                        color: theme.textColor
-                        font.pixelSize: 24
                     }
 
                     ColumnLayout {
-                        Label {
+                        BodyText {
                             text: "Choose a color scheme for Photobase to use"
-                            color: theme.textColor
-                            font.pixelSize: 14
                         }
-                        StyledComboBox {
+                        ComboBox {
                             id: control
                             model: ["System", "Normal", "Dark"]
                             currentIndex: model.indexOf(settingsController.theme)
@@ -54,32 +50,27 @@ Item {
                 // Directory List Section
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: theme.spacingMedium
 
-                    Label {
+                    Header {
                         text: "Gallery"
-                        color: theme.textColor
-                        font.pixelSize: 24
                     }
                     
-                    Label {
+                    BodyText {
                         text: "Add or remove directories Photobase should scan"
-                        color: theme.textColor
-                        font.pixelSize: 14
                     }
                     
                     // Container for List + Buttons
                     Rectangle {
                         Layout.fillWidth: true
                         height: 300 // Fixed height for the editor area as per typical usage, or could be flexible
-                        color: theme.isDark ? "#1e1e1e" : "#f5f5f5" // Tinted background
+                        color: theme.secondaryBackgroundColor
                         border.color: theme.borderColor
-                        radius: 5
                         
                         ColumnLayout {
                             anchors.fill: parent
-                            anchors.margins: 10
-                            spacing: 10
+                            anchors.margins: theme.spacingMedium
+                            spacing: theme.spacingMedium
                             
                             ListView {
                                 id: pathsList
@@ -91,9 +82,8 @@ Item {
                                 delegate: ItemDelegate {
                                     width: ListView.view.width
                                     text: modelData
-                                    contentItem: Text {
+                                    contentItem: BodyText {
                                         text: modelData
-                                        color: theme.textColor
                                         elide: Text.ElideLeft
                                         verticalAlignment: Text.AlignVCenter
                                     }
@@ -158,10 +148,8 @@ Item {
                     Layout.fillWidth: true
                     spacing: 10
                     
-                    Label {
+                    Header {
                         text: "About"
-                        color: theme.textColor
-                        font.pixelSize: 24
                     }
                     Item {
                         implicitWidth: aboutRow.implicitWidth
@@ -175,11 +163,9 @@ Item {
                             anchors.fill: parent
                             spacing: 10
                             
-                            Text {
+                            BodyText {
                                 text: "About Photobase"
-                                color: theme.textColor
                                 verticalAlignment: Text.AlignVCenter
-                                font.pixelSize: 14
                             }
 
                             // Link icon

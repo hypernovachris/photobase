@@ -1,7 +1,7 @@
 from core.config import config
 from PyQt6.QtWidgets import QApplication, QSplashScreen
-from PyQt6.QtQml import QQmlApplicationEngine
 from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtQml import QQmlApplicationEngine
 from core.database import db
 from core.image_processing import ImageScanner
 import os

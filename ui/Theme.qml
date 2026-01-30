@@ -4,39 +4,31 @@ import QtQuick.Controls
 QtObject {
     id: theme
 
-    // Valid values: "Normal", "Dark", "System"
-    property string mode: settingsController.theme
-    
-    // Check system dark mode
-    property bool systemDark: settingsController.systemDarkMode
-
-    readonly property bool isDark: {
-        if (mode === "System") return systemDark
-        return mode === "Dark"
-    }
-
     // Colors
-    readonly property color backgroundColor: isDark ? "#2d2d30" : "#d0d0d5" // Slightly darker/warmer for desktop feel
-    readonly property color textColor: isDark ? "#ffffff" : "#000000"
-    readonly property color headerColor: isDark ? "#383838" : "#e0e0e0"
+    readonly property color backgroundColor: "#f0f0f0"
+    readonly property color textColor: "#000000"
+    readonly property color highlightColor: "#0078d7"
+    readonly property color secondaryHighlightColor: "#cce5ff"
+    readonly property color secondaryTextColor: "#666666"
+    readonly property color borderColor: "#777777"
+    readonly property color secondaryBackgroundColor: "#ffffff"
+    readonly property color buttonColor: "#777777"
 
-    // Gradients & 3D Elements
-    readonly property color headerGradientStart: isDark ? "#454545" : "#f5f5f5"
-    readonly property color headerGradientEnd: isDark ? "#2d2d2d" : "#cfcfcf"
+
+
+    // Font Sizes
+    readonly property int fontSizeTitle: 32
+    readonly property int fontSizeHeader: 24
+    readonly property int fontSizeSubheader: 20
+    readonly property int fontSizeBody: 14
+    readonly property int fontSizeSmall: 12
+
+    // Spacing & Layout
+    readonly property int spacingSmall: 5
+    readonly property int spacingMedium: 10
+    readonly property int spacingLarge: 20
+    readonly property int paddingMedium: 20
     
-    readonly property color buttonGradientStart: isDark ? "#4e4e4e" : "#fdfdfd"
-    readonly property color buttonGradientEnd: isDark ? "#333333" : "#dadada"
-    readonly property color buttonPressedStart: isDark ? "#2a2a2a" : "#c4c4c4"
-    readonly property color buttonPressedEnd: isDark ? "#3a3a3a" : "#e0e0e0"
-
-    readonly property color bevelLight: isDark ? "#606060" : "#ffffff"
-    readonly property color bevelDark: isDark ? "#1a1a1a" : "#a0a0a0"
-    readonly property color shadowColor: "#40000000"
-
-    readonly property color buttonColor: isDark ? "#333333" : "#ffffff" // Fallback
-    readonly property color highlightColor: "#0078d7" // Standard Windows Blue
-    readonly property color secondaryHighlightColor: isDark ? "#1d4874" : "#86C1FC"
-    readonly property color secondaryTextColor: isDark ? "#b0b0b0" : "#666666"
-    readonly property color borderColor: isDark ? "#1e1e1e" : "#888888" // Sharper borders
-    readonly property color textFieldColor: isDark ? "#202020" : "#ffffff"
+    // Component Sizes
+    readonly property int headerHeight: 50
 }

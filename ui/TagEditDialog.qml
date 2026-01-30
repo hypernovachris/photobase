@@ -67,7 +67,6 @@ Dialog {
 
     background: Rectangle {
         color: theme.borderColor
-        radius: 10
         Rectangle {
             anchors.fill: parent
             anchors.leftMargin: 1
@@ -75,7 +74,6 @@ Dialog {
             anchors.topMargin: 1
             anchors.bottomMargin: 1
             color: theme.backgroundColor
-            radius: 9
         }
     }
 
@@ -106,7 +104,7 @@ Dialog {
                 onAccepted: addBtn.clicked()
                 color: theme.textColor
                 background: Rectangle {
-                    color: theme.textFieldColor
+                    color: theme.secondaryBackgroundColor
                     border.color: theme.borderColor
                 }
             }
@@ -146,7 +144,7 @@ Dialog {
             ListView {
                 id: tagList
                 model: allTags
-                delegate: StyledCheckBox {
+                delegate: CheckBox {
                     text: modelData
                     checked: tagsState[modelData] === true
                     onClicked: {

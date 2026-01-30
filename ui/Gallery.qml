@@ -42,7 +42,7 @@ Item {
             ListView {
                 id: listView
                 anchors.fill: parent
-                spacing: 20
+                spacing: theme.spacingLarge
                 clip: true
                 interactive: true 
                 cacheBuffer: 1000
@@ -53,11 +53,11 @@ Item {
                 
                 header: Column {
                     width: listView.width
-                    spacing: 20
-                    padding: 20
+                    spacing: theme.spacingLarge
+                    padding: theme.paddingMedium
 
                     RowLayout {
-                        spacing: 10
+                        spacing: theme.spacingMedium
 
                         // Back Button
                         IconButton {
@@ -69,11 +69,8 @@ Item {
                             onClicked: galleryModel.clear_tag_filter()
                         }
 
-                        Label {
+                        Title {
                             text: activeFilter
-                            color: theme.textColor
-                            font.bold: true
-                            font.pixelSize: 32
                             visible: activeFilter !== ""
                         }
                     }
@@ -130,7 +127,7 @@ Item {
                 function updateQueueLimit() {
                     // Calculate how many 128x128 images fit on screen
                     // Flow logic: (Available Width / (Item + Spacing))
-                    var availableWidth = listView.width - 20 // Padding
+                    var availableWidth = listView.width - theme.paddingMedium // Padding
                     var colCount = Math.floor((availableWidth + 10) / (128 + 10))
                     if (colCount < 1) colCount = 1
                     
@@ -148,9 +145,9 @@ Item {
                     var imgCount = galleryModel.getImageCountForMonth(monthIndex);
                     if (imgCount === 0) return 0;
 
-                    var flowPadding = 20;
+                    var flowPadding = theme.paddingMedium;
                     var imageSize = 128;
-                    var flowSpacing = 10;
+                    var flowSpacing = theme.spacingMedium;
                     var headerHeight = 40;
 
                     var availableWidth = listView.width - flowPadding;
@@ -251,9 +248,9 @@ Item {
                 delegate: Item {
                     width: ListView.view.width
                     // Deterministic height calculation
-                    property int flowPadding: 20
+                    property int flowPadding: theme.paddingMedium
                     property int imageSize: 128
-                    property int flowSpacing: 10
+                    property int flowSpacing: theme.spacingMedium
                     property int headerHeight: 40
                     
                     // Calculate available width for images
@@ -273,12 +270,9 @@ Item {
                         anchors.fill: parent
                         spacing: 10
                         
-                        Label {
+                        Subheader {
                             height: 30 // Part of header height
                             text: monthText
-                            color: theme.textColor
-                            font.bold: true
-                            font.pixelSize: 20
                             anchors.left: parent.left
                             anchors.leftMargin: (parent.width - gridWidth) / 2
                             verticalAlignment: Text.AlignVCenter
@@ -293,7 +287,7 @@ Item {
                         Flow {
                             width: gridWidth
                             anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: 10
+                            spacing: theme.spacingMedium
                             
                             Repeater {
                                 model: images
@@ -458,13 +452,13 @@ Item {
             implicitWidth: 200
             implicitHeight: 22
             color: menuItem.highlighted ? theme.highlightColor : "transparent"
-            radius: 4
+            anchors.fill: parent
+            anchors.margins: 2
         }
         
-        contentItem: Text {
+        contentItem: SmallText {
             text: menuItem.text
-            font.pixelSize: 12 // Standard UI size
-            color: menuItem.highlighted ? "#ffffff" : theme.textColor
+            color: menuItem.highlighted ? theme.textColor : theme.textColor
             verticalAlignment: Text.AlignVCenter
             leftPadding: 10
         }
@@ -478,7 +472,6 @@ Item {
             color: theme.buttonColor
             border.color: theme.borderColor
             border.width: 1
-            radius: 4
         }
     
         StyledMenuItem {

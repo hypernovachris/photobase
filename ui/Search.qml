@@ -98,25 +98,23 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    color: theme.textFieldColor
+                    color: theme.secondaryBackgroundColor
                     border.color: theme.borderColor
-                    topLeftRadius: 4
-                    bottomLeftRadius: 4
                     anchors.margins: 10
                     
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 5
-                        spacing: 5
+                        anchors.margins: theme.spacingSmall
+                        spacing: theme.spacingSmall
                         
                         // Placeholder
-                        Text {
+                        BodyText {
                             visible: activeFiltersModel.count === 0
                             text: "Start by adding a filter..."
                             color: theme.secondaryTextColor
                             font.italic: true
                             Layout.alignment: Qt.AlignVCenter
-                            leftPadding: 5
+                            leftPadding: theme.spacingSmall
                         }
 
                         // Filter Chips
@@ -124,24 +122,21 @@ Item {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             orientation: ListView.Horizontal
-                            spacing: 5
+                            spacing: theme.spacingSmall
                             model: activeFiltersModel
                             clip: true
                             
                             delegate: Rectangle {
                                 height: 30
                                 width: chipRow.implicitWidth + 20
-                                color: theme.isDark ? theme.buttonColor : theme.backgroundColor
-                                radius: 15
+                                color: theme.secondaryBackgroundColor
                                 
                                 RowLayout {
                                     id: chipRow
                                     anchors.centerIn: parent
-                                    spacing: 5
-                                    Text {
+                                    spacing: theme.spacingSmall
+                                    SmallText {
                                         text: model.label
-                                        color: theme.textColor
-                                        font.pixelSize: 12
                                     }
                                     IconButton {
                                         source: "file:assets/icons/x.svg"
@@ -170,8 +165,6 @@ Item {
                     }
                     background: Rectangle {
                         color: theme.highlightColor
-                        topRightRadius: 4
-                        bottomRightRadius: 4
                     }
                 }
                 Item {
@@ -189,15 +182,13 @@ Item {
             ColumnLayout {
                 id: filtersColumn
                 anchors.fill: parent
-                anchors.margins: 20
-                spacing: 20 // Increased spacing between sections
+                anchors.margins: theme.paddingMedium
+                spacing: theme.spacingLarge // Increased spacing between sections
                 
                 RowLayout {
                     Layout.fillWidth: true
-                    Label {
+                    Header {
                         text: "Filters"
-                        font.pixelSize: 24
-                        color: theme.textColor
                         Layout.fillWidth: true
                     }
                     
@@ -210,11 +201,10 @@ Item {
                         background: Rectangle {
                            color: parent.checked ? "red" : theme.buttonColor
                            border.color: theme.borderColor
-                           radius: 4
                         }
                         contentItem: Text {
                             text: parent.text
-                            color: parent.checked ? "white" : theme.textColor
+                            color: "white"
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
@@ -235,12 +225,6 @@ Item {
                     rightPadding: 15
                     background: Rectangle {
                         id: backgroundRect
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: Qt.tint(theme.buttonGradientStart, Qt.alpha(theme.bevelLight, 0.7)) }
-                            GradientStop { position: 2.0 / backgroundRect.height; color: theme.buttonGradientStart }
-                            GradientStop { position: 1.0; color: theme.buttonGradientEnd }
-                        }
-                        radius: 15
                         border.color: theme.borderColor
                     }
                     palette.buttonText: theme.textColor
@@ -248,14 +232,14 @@ Item {
 
                 component FilterSection: Flow {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: theme.spacingMedium
                 }
                 
                 GridLayout {
                     columns: 2
                     Layout.fillWidth: true
-                    columnSpacing: 10
-                    rowSpacing: 20
+                    columnSpacing: theme.spacingMedium
+                    rowSpacing: theme.spacingLarge
 
                     IconButton {
                         source: "file:assets/icons/calendar.svg"

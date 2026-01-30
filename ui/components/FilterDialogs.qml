@@ -55,7 +55,6 @@ Item {
 
         background: Rectangle {
             color: theme.borderColor
-            radius: 10
             Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: 1
@@ -63,7 +62,6 @@ Item {
                 anchors.topMargin: 1
                 anchors.bottomMargin: 1
                 color: theme.backgroundColor
-                radius: 9
             }
         }
 
@@ -74,7 +72,7 @@ Item {
                 return "Since Date"
             }
             color: theme.textColor
-            font.pixelSize: 14
+            font.pixelSize: theme.fontSizeBody
             padding: 10
             horizontalAlignment: Text.AlignHCenter
             background: Rectangle {
@@ -164,7 +162,6 @@ Item {
 
         background: Rectangle {
             color: theme.borderColor
-            radius: 10
             Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: 1
@@ -172,14 +169,13 @@ Item {
                 anchors.topMargin: 1
                 anchors.bottomMargin: 1
                 color: theme.backgroundColor
-                radius: 9
             }
         }
 
         header: Label {
             text: "Between Dates"
             color: theme.textColor
-            font.pixelSize: 14
+            font.pixelSize: theme.fontSizeBody
             padding: 10
             horizontalAlignment: Text.AlignHCenter
             background: Rectangle {
@@ -194,9 +190,8 @@ Item {
             
             RowLayout {
                 Layout.fillWidth: true
-                Label {
+                BodyText {
                     text: "Start date:"
-                    color: theme.textColor
                     Layout.preferredWidth: 80
                 }
                 StandardButton {
@@ -215,9 +210,8 @@ Item {
             
             RowLayout {
                 Layout.fillWidth: true
-                Label {
+                BodyText {
                     text: "End date:"
-                    color: theme.textColor
                     Layout.preferredWidth: 80
                 }
                 StandardButton {
@@ -272,7 +266,6 @@ Item {
 
         background: Rectangle {
             color: theme.borderColor
-            radius: 10
             Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: 1
@@ -280,14 +273,13 @@ Item {
                 anchors.topMargin: 1
                 anchors.bottomMargin: 1
                 color: theme.backgroundColor
-                radius: 9
             }
         }
 
         header: Label {
             text: "Select " + listSelectionDialog.mode.charAt(0).toUpperCase() + listSelectionDialog.mode.slice(1) 
             color: theme.textColor
-            font.pixelSize: 14
+            font.pixelSize: theme.fontSizeBody
             padding: 10
             horizontalAlignment: Text.AlignHCenter
             background: Rectangle {
@@ -309,7 +301,9 @@ Item {
         // Background for the list area
         Rectangle {
             anchors.fill: parent
-            color: theme.textFieldColor
+            anchors.leftMargin: 1
+            anchors.rightMargin: 1
+            color: theme.secondaryBackgroundColor
             // Add a border if needed, or rely on the dialog's border
         }
 
@@ -325,10 +319,8 @@ Item {
                 palette.text: theme.textColor
                 width: ListView.view.width
                 
-                contentItem: Text {
+                contentItem: BodyText {
                     text: parent.text
-                    color: theme.textColor
-                    font: parent.font
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignVCenter
                     leftPadding: 10
@@ -341,8 +333,9 @@ Item {
                 // background rectangle
                 background: Rectangle {
                     anchors.fill: parent
-                    color: parent.down ? theme.buttonPressedStart : (parent.hovered ? theme.buttonColor : "transparent")
-                    
+                    color: parent.down ? theme.buttonPressedStart : (parent.hovered ? theme.secondaryBackgroundColor : "transparent")
+                    anchors.leftMargin: 1
+                    anchors.rightMargin: 1
                     // Separator line
                     Rectangle {
                         width: parent.width
@@ -367,7 +360,6 @@ Item {
 
         background: Rectangle {
             color: theme.borderColor
-            radius: 10
             Rectangle {
                 anchors.fill: parent
                 anchors.leftMargin: 1
@@ -375,14 +367,13 @@ Item {
                 anchors.topMargin: 1
                 anchors.bottomMargin: 1
                 color: theme.backgroundColor
-                radius: 9
             }
         }
 
         header: Label {
             text: "Enter Value"
             color: theme.textColor
-            font.pixelSize: 14
+            font.pixelSize: theme.fontSizeBody
             padding: 10
             horizontalAlignment: Text.AlignHCenter
             background: Rectangle {
@@ -412,9 +403,8 @@ Item {
                 Layout.fillWidth: true
                 focus: true
                 palette.text: theme.textColor
-                palette.placeholderText: theme.placeholderTextColor
                 background: Rectangle {
-                    color: theme.textFieldColor
+                    color: theme.secondaryBackgroundColor
                     border.color: theme.borderColor
                     border.width: 1
                 }
