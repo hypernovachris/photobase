@@ -34,58 +34,34 @@ if __name__ == "__main__":
   
   # Process events to show splash immediately
   app.processEvents()
-  
+
   initialize_app(scan_paths)
-  
-  engine = QQmlApplicationEngine()
-  
+
+  from core.gallery_model import GalleryModel
   from core.thumbnail_generator import ThumbnailGenerator
-  
-  # Keep references to prevent garbage collection
-  # Although they are in local scope of a blocking function, explicit references can help debug or edge cases
-  app.gallery_model = GalleryModel(app)
-  engine.rootContext().setContextProperty("galleryModel", app.gallery_model)
-
+  from core.settings_controller import SettingsController
   from core.heic_provider import HeicImageProvider
-  app.heic_provider = HeicImageProvider()
-  engine.addImageProvider("heic", app.heic_provider)
+  from ui.widgets.main_window import MainWindow
 
-  app.settingsController = SettingsController(app)
-  engine.rootContext().setContextProperty("settingsController", app.settingsController)
-  
-  app.thumbnailGenerator = ThumbnailGenerator(app)
-  engine.rootContext().setContextProperty("thumbnailGenerator", app.thumbnailGenerator)
-  
-  # print("SettingsController initialized and registered")
-  
-  # Load main.qml
-  current_dir = os.path.dirname(os.path.abspath(__file__))
+  # Initialize Controllers
+  gallery_model = GalleryModel()
+  settings_controller = SettingsController()
+  thumbnail_generator = ThumbnailGenerator()
+  heic_provider = HeicImageProvider()
 
-  # Instantiate Theme and register as context property
-  from PyQt6.QtQml import QQmlComponent, QQmlEngine
-  theme_component = QQmlComponent(engine, QUrl.fromLocalFile(os.path.join(current_dir, "ui/Theme.qml")))
-  theme_object = theme_component.create()
-  if not theme_object:
-      print("Error creating theme object:", theme_component.errors())
-      sys.exit(-1)
-
-  # Set parent to app and ownership to Cpp to prevent GC by QML engine
-  theme_object.setParent(app)
-  QQmlEngine.setObjectOwnership(theme_object, QQmlEngine.ObjectOwnership.CppOwnership)
-      
-  engine.rootContext().setContextProperty("theme", theme_object)
+  # Pass 'app' if needed by controllers (e.g. for parenting or signals if they expect QObject parent)
+  # The original code passed 'app' to some controllers. Let's check constructor signatures if possible, 
+  # but based on my earlier read, GalleryModel(parent=None) was default. 
+  # However, to be safe and consistent with previous code where they were parented to app:
+  gallery_model.setParent(app)
+  settings_controller.setParent(app)
+  thumbnail_generator.setParent(app)
   
-  # Keep reference to prevent GC (App parent might be enough, but this doesn't hurt)
-  app.theme_object = theme_object
+  # Initialize Main Window
+  window = MainWindow(gallery_model, thumbnail_generator, settings_controller, heic_provider)
+  window.show()
 
-  qml_file = os.path.join(current_dir, "ui/main.qml")
-  engine.load(QUrl.fromLocalFile(qml_file))
-  
-  # Check if QML loaded successfully
-  if not engine.rootObjects():
-      sys.exit(-1)
-      
   # Close splash screen
   splash.close()
-  
+
   sys.exit(app.exec())

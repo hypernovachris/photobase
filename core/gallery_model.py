@@ -20,6 +20,9 @@ def month_numericstr_to_text(numeric_month_str):
 class GalleryModel(QAbstractListModel):
     MonthTextRole = Qt.ItemDataRole.UserRole + 1
     ImagesRole = Qt.ItemDataRole.UserRole + 2
+    
+    openImageRequested = pyqtSignal(str, arguments=['path'])
+    switchGalleryRequested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -97,6 +100,18 @@ class GalleryModel(QAbstractListModel):
     @pyqtProperty(int, notify=countChanged)
     def count(self):
         return self.rowCount()
+
+    @property
+    def active_filters(self):
+        return self._active_filters
+        
+    @pyqtSlot(str)
+    def request_open_image(self, path):
+        self.openImageRequested.emit(path)
+
+    @pyqtSlot()
+    def request_switch_to_gallery(self):
+        self.switchGalleryRequested.emit()
 
     # --- Selection Handling ---
 
@@ -348,6 +363,10 @@ class GalleryModel(QAbstractListModel):
     
     @pyqtSlot()
     def clear_tag_filter(self):
+        self.clear_filter()
+        
+    @pyqtSlot()
+    def clear_filter(self):
         self._active_filters = []
         self._active_filter_name = ""
         self.load_images()
