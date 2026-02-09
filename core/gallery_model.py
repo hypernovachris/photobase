@@ -2,6 +2,7 @@ from PyQt6.QtCore import QAbstractListModel, Qt, QVariant, QModelIndex, QUrl, py
 from core.database import db
 import os
 from PIL import Image
+from core.profiler import profile
 
 def month_numericstr_to_text(numeric_month_str):
     if not numeric_month_str:
@@ -24,8 +25,20 @@ class GalleryModel(QAbstractListModel):
     openImageRequested = pyqtSignal(str, arguments=['path'])
     switchGalleryRequested = pyqtSignal()
 
+    _instance = None
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = GalleryModel()
+        return cls._instance
+
     def __init__(self, parent=None):
-        super().__init__(parent)
+        if GalleryModel._instance is not None:
+            raise Exception("This class is a singleton!")
+        else:
+             super().__init__(parent)
+             GalleryModel._instance = self
         self._sections = []
         self._active_filters = []
         # Support legacy properties for active filter display
@@ -66,30 +79,33 @@ class GalleryModel(QAbstractListModel):
         self.load_images()
         self.tagsChanged.emit()
 
+    @profile
     def load_images(self):
         self.beginResetModel()
         self._sections = []
         db.connect()
         
-        # 1. Get Distinct Months based on current filter
-        month_strings = db.images.get_filtered_months(self._active_filters)
+        # Optimized: Get all images and their months in one query
+        rows = db.images.get_filtered_images_with_month(self._active_filters)
         
-        for month_str in month_strings:
-            # 2. Get Images for Month based on current filter
-            image_rows = db.images.get_filtered_images(month_str, self._active_filters)
-            
-            image_list = []
-            for (file_path, thumb_path) in image_rows:
-                abs_thumb_path = os.path.abspath(thumb_path)
-                image_list.append({
-                    'path': file_path,
-                    'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString()
-                })
-                
-            self._sections.append({
-                'month_text': month_numericstr_to_text(month_str),
-                'images': image_list
-            })
+        # Group by month
+        from itertools import groupby
+        
+        # rows is [(path, thumb, month), ...] ordered by date desc (so month desc)
+        for month_str, group in groupby(rows, key=lambda x: x[2]):
+             image_list = []
+             for (file_path, thumb_path, _) in group:
+                 abs_thumb_path = os.path.abspath(thumb_path)
+                 image_list.append({
+                     'path': file_path,
+                     'thumbnail': QUrl.fromLocalFile(abs_thumb_path).toString(),
+                     'thumbnailPath': abs_thumb_path
+                 })
+                 
+             self._sections.append({
+                 'month_text': month_numericstr_to_text(month_str),
+                 'images': image_list
+             })
             
         db.close()
         self.endResetModel()
@@ -366,6 +382,7 @@ class GalleryModel(QAbstractListModel):
         self.clear_filter()
         
     @pyqtSlot()
+    @profile
     def clear_filter(self):
         self._active_filters = []
         self._active_filter_name = ""

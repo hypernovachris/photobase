@@ -44,9 +44,9 @@ if __name__ == "__main__":
   from ui.widgets.main_window import MainWindow
 
   # Initialize Controllers
-  gallery_model = GalleryModel()
+  gallery_model = GalleryModel.instance()
   settings_controller = SettingsController()
-  thumbnail_generator = ThumbnailGenerator()
+  thumbnail_generator = ThumbnailGenerator.instance()
   heic_provider = HeicImageProvider()
 
   # Pass 'app' if needed by controllers (e.g. for parenting or signals if they expect QObject parent)
@@ -58,7 +58,7 @@ if __name__ == "__main__":
   thumbnail_generator.setParent(app)
   
   # Initialize Main Window
-  window = MainWindow(gallery_model, thumbnail_generator, settings_controller, heic_provider)
+  window = MainWindow(settings_controller, heic_provider)
   window.show()
 
   # Close splash screen

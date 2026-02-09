@@ -4,20 +4,20 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSlot, QSize, QRect, QUrl
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QAction, QMouseEvent, QIcon
-from core.theme import Theme
-from ui.widgets.flow_layout import FlowLayout
+from ui.widgets.util.flow_layout import FlowLayout
 import os
+from core.thumbnail_generator import ThumbnailGenerator
+from core.gallery_model import GalleryModel
 
 class TagCard(QWidget):
-    def __init__(self, tag_data, gallery_model, thumbnail_generator, on_click, parent=None):
+    def __init__(self, tag_data, on_click, parent=None):
         super().__init__(parent)
         self.tag_data = tag_data # {id, name, count, thumbnail, coverPath}
-        self.gallery_model = gallery_model
-        self.thumbnail_generator = thumbnail_generator
+        self.gallery_model = GalleryModel.instance()
+        self.thumbnail_generator = ThumbnailGenerator.instance()
         self.on_click = on_click
         
         self.setFixedSize(160, 200)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
         
         self.is_hovered = False
         self.pixmap = None
@@ -42,13 +42,10 @@ class TagCard(QWidget):
         painter = QPainter(self)
         
         # Card Background
-        painter.setPen(Theme.borderColor if not self.is_hovered else Theme.highlightColor)
-        painter.setBrush(Theme.buttonColor)
         painter.drawRect(0, 0, self.width()-1, self.height()-1)
         
         # Image Area
         img_rect = QRect(10, 10, 140, 140)
-        painter.setBrush(Theme.secondaryBackgroundColor)
         painter.drawRect(img_rect)
         
         if self.pixmap:
@@ -61,7 +58,6 @@ class TagCard(QWidget):
             painter.setClipping(False)
             
         # Text
-        painter.setPen(Theme.textColor)
         font = painter.font()
         font.setBold(True)
         painter.setFont(font)
@@ -69,7 +65,6 @@ class TagCard(QWidget):
         
         font.setBold(False)
         painter.setFont(font)
-        painter.setPen(Theme.secondaryTextColor)
         painter.drawText(QRect(10, 180, 140, 20), Qt.AlignmentFlag.AlignCenter, f"{self.tag_data['count']} Photos")
 
     def enterEvent(self, event):
@@ -90,10 +85,10 @@ class TagCard(QWidget):
             self.update()
 
 class TagsView(QWidget):
-    def __init__(self, gallery_model, thumbnail_generator, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.gallery_model = gallery_model
-        self.thumbnail_generator = thumbnail_generator
+        self.gallery_model = GalleryModel.instance()
+        self.thumbnail_generator = ThumbnailGenerator.instance()
         
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -104,14 +99,13 @@ class TagsView(QWidget):
         
         self.content_widget = QWidget()
         self.flow_layout = FlowLayout(self.content_widget)
-        self.flow_layout.setSpacing(Theme.spacingLarge)
         
         self.scroll_area.setWidget(self.content_widget)
         self.layout.addWidget(self.scroll_area)
         
         # Connect Signals
         self.gallery_model.tagsChanged.connect(self.refresh_tags)
-        self.thumbnail_generator.thumbnailReady.connect(self.on_thumbnail_ready)
+        #self.thumbnail_generator.thumbnailReady.connect(self.on_thumbnail_ready)
         
         self.tag_cards = []
         self.refresh_tags()
@@ -128,7 +122,7 @@ class TagsView(QWidget):
         tags_model = self.gallery_model.get_all_tags_model() # List of dicts
         
         for tag_data in tags_model:
-            card = TagCard(tag_data, self.gallery_model, self.thumbnail_generator, self.on_tag_clicked)
+            card = TagCard(tag_data, self.on_tag_clicked)
             self.flow_layout.addWidget(card)
             self.tag_cards.append(card)
 

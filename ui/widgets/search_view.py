@@ -6,20 +6,13 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QSize, QDate
 from PyQt6.QtGui import QIcon
-from core.theme import Theme
-from ui.widgets.flow_layout import FlowLayout
+from ui.widgets.util.flow_layout import FlowLayout
 import json
+from core.gallery_model import GalleryModel
 
 class FilterChip(QFrame):
     def __init__(self, text, on_close, parent=None):
         super().__init__(parent)
-        self.setStyleSheet(f"""
-            QFrame {{
-                background-color: {Theme.secondaryBackgroundColor.name()};
-                border-radius: 15px;
-                border: 1px solid {Theme.borderColor.name()};
-            }}
-        """)
         self.setFixedHeight(30)
         
         layout = QHBoxLayout()
@@ -36,16 +29,16 @@ class FilterChip(QFrame):
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.setFlat(True)
         close_btn.setStyleSheet(f"""
-            QPushButton {{ border: none; font-weight: bold; color: {Theme.secondaryTextColor.name()}; }}
+            QPushButton {{ border: none; font-weight: bold; }}
             QPushButton:hover {{ color: red; }}
         """)
         close_btn.clicked.connect(on_close)
         layout.addWidget(close_btn)
 
 class SearchView(QWidget):
-    def __init__(self, gallery_model, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.gallery_model = gallery_model
+        self.gallery_model = GalleryModel.instance()
         self.active_filters = [] # List of dicts: {type, value, negated, label}
         self.is_negated_mode = False
         
@@ -63,19 +56,13 @@ class SearchView(QWidget):
         
         # Input Area (Chips)
         self.chips_container = QWidget()
-        self.chips_container.setStyleSheet(f"""
-            QWidget {{
-                background-color: {Theme.secondaryBackgroundColor.name()};
-                border: 1px solid {Theme.borderColor.name()};
-            }}
-        """)
         self.chips_layout = QHBoxLayout(self.chips_container)
         self.chips_layout.setContentsMargins(5, 5, 5, 5)
         self.chips_layout.setSpacing(5)
         self.chips_layout.addStretch() # Push items to left
         
         self.placeholder_label = QLabel("Start by adding a filter...")
-        self.placeholder_label.setStyleSheet(f"color: {Theme.secondaryTextColor.name()}; font-style: italic;")
+        self.placeholder_label.setStyleSheet(f"font-style: italic;")
         self.chips_layout.insertWidget(0, self.placeholder_label)
         
         search_bar_layout.addWidget(self.chips_container, 1)
@@ -85,15 +72,10 @@ class SearchView(QWidget):
         self.search_btn.setIcon(QIcon("assets/icons/search.svg"))
         self.search_btn.setIconSize(QSize(24, 24))
         self.search_btn.setFixedSize(50, 40)
-        self.search_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.search_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {Theme.highlightColor.name()}; 
                 border: none;
                 border-radius: 4px;
-            }}
-            QPushButton:disabled {{
-                background-color: {Theme.buttonColor.name()};
             }}
         """)
         self.search_btn.clicked.connect(self.perform_search)
@@ -110,26 +92,20 @@ class SearchView(QWidget):
         scroll.setWidget(scroll_content)
         
         content_layout = QVBoxLayout(scroll_content)
-        content_layout.setSpacing(Theme.spacingLarge)
-        content_layout.setContentsMargins(Theme.paddingMedium, Theme.paddingMedium, Theme.paddingMedium, Theme.paddingMedium)
         
         # Heading & Negation Toggle
         header_layout = QHBoxLayout()
         header = QLabel("Filters")
-        header.setStyleSheet(f"font-size: {Theme.fontSizeHeader}px; font-weight: bold;")
         header_layout.addWidget(header)
         header_layout.addStretch()
         
         self.negate_btn = QPushButton("Toggle negative filters")
         self.negate_btn.setCheckable(True)
-        self.negate_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.negate_btn.clicked.connect(self.toggle_negation)
         self.negate_btn.setStyleSheet(f"""
             QPushButton:checked {{ background-color: red; color: white; border: 1px solid red; }}
             QPushButton {{ 
-                background-color: {Theme.buttonColor.name()}; 
                 padding: 5px 10px;
-                border: 1px solid {Theme.borderColor.name()};
                 border-radius: 4px;
             }}
         """)
@@ -144,8 +120,7 @@ class SearchView(QWidget):
         
         # Filter Buttons Grid
         grid = QGridLayout()
-        grid.setHorizontalSpacing(Theme.spacingMedium)
-        grid.setVerticalSpacing(Theme.spacingLarge)
+
         
         # Dates
         grid.addWidget(self.create_icon_label("assets/icons/calendar.svg"), 0, 0, Qt.AlignmentFlag.AlignTop)
@@ -200,14 +175,9 @@ class SearchView(QWidget):
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {Theme.secondaryBackgroundColor.name()};
-                border: 1px solid {Theme.borderColor.name()};
                 padding: 5px 15px;
                 text-align: left;
                 border-radius: 4px;
-            }}
-            QPushButton:hover {{
-                background-color: {Theme.secondaryHighlightColor.name()};
             }}
         """)
         return btn
@@ -256,7 +226,6 @@ class SearchView(QWidget):
         
         if not self.active_filters:
             self.placeholder_label = QLabel("Start by adding a filter...")
-            self.placeholder_label.setStyleSheet(f"color: {Theme.secondaryTextColor.name()}; font-style: italic;")
             self.chips_layout.addWidget(self.placeholder_label)
             self.chips_layout.addStretch()
             self.search_btn.setEnabled(False)

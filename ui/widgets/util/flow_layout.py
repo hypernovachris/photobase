@@ -1,13 +1,18 @@
+# Copyright (C) 2013 Riverbank Computing Limited.
+# Copyright (C) 2022 The Qt Company Ltd.
+# SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
+
+from PyQt6.QtCore import Qt, QMargins, QPoint, QRect, QSize
 from PyQt6.QtWidgets import QLayout, QSizePolicy
-from PyQt6.QtCore import Qt, QPoint, QRect, QSize
 
 class FlowLayout(QLayout):
-    def __init__(self, parent=None, margin=0, spacing=-1):
+    def __init__(self, parent=None):
         super().__init__(parent)
+
         if parent is not None:
-            self.setContentsMargins(margin, margin, margin, margin)
-        self.setSpacing(spacing)
-        self.itemList = []
+            self.setContentsMargins(QMargins(0, 0, 0, 0))
+
+        self._item_list = []
 
     def __del__(self):
         item = self.takeAt(0)
@@ -15,19 +20,21 @@ class FlowLayout(QLayout):
             item = self.takeAt(0)
 
     def addItem(self, item):
-        self.itemList.append(item)
+        self._item_list.append(item)
 
     def count(self):
-        return len(self.itemList)
+        return len(self._item_list)
 
     def itemAt(self, index):
-        if 0 <= index < len(self.itemList):
-            return self.itemList[index]
+        if 0 <= index < len(self._item_list):
+            return self._item_list[index]
+
         return None
 
     def takeAt(self, index):
-        if 0 <= index < len(self.itemList):
-            return self.itemList.pop(index)
+        if 0 <= index < len(self._item_list):
+            return self._item_list.pop(index)
+
         return None
 
     def expandingDirections(self):
@@ -41,7 +48,7 @@ class FlowLayout(QLayout):
         return height
 
     def setGeometry(self, rect):
-        super().setGeometry(rect)
+        super(FlowLayout, self).setGeometry(rect)
         self._do_layout(rect, False)
 
     def sizeHint(self):
@@ -49,8 +56,10 @@ class FlowLayout(QLayout):
 
     def minimumSize(self):
         size = QSize()
-        for item in self.itemList:
+
+        for item in self._item_list:
             size = size.expandedTo(item.minimumSize())
+
         size += QSize(2 * self.contentsMargins().top(), 2 * self.contentsMargins().top())
         return size
 
@@ -58,14 +67,21 @@ class FlowLayout(QLayout):
         x = rect.x()
         y = rect.y()
         line_height = 0
+        spacing = self.spacing()
 
-        for item in self.itemList:
-            # widget = item.widget()
-            space_x = self.spacing()
-            space_y = self.spacing()
-            
+        for item in self._item_list:
+            style = item.widget().style()
+            layout_spacing_x = style.layoutSpacing(
+                QSizePolicy.ControlType.PushButton, QSizePolicy.ControlType.PushButton,
+                Qt.Orientation.Horizontal
+            )
+            layout_spacing_y = style.layoutSpacing(
+                QSizePolicy.ControlType.PushButton, QSizePolicy.ControlType.PushButton,
+                Qt.Orientation.Vertical
+            )
+            space_x = spacing + layout_spacing_x
+            space_y = spacing + layout_spacing_y
             next_x = x + item.sizeHint().width() + space_x
-            
             if next_x - space_x > rect.right() and line_height > 0:
                 x = rect.x()
                 y = y + line_height + space_y

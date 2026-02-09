@@ -1,319 +1,182 @@
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QScrollArea, QFrame, QMenu, QApplication, QHBoxLayout, QPushButton
-)
-from PyQt6.QtCore import Qt, pyqtSlot, QSize, QRect, QTimer, QPoint
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QAction, QMouseEvent
-from core.theme import Theme
-from ui.widgets.flow_layout import FlowLayout
-import os
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QSpacerItem, QHBoxLayout, QLabel, QPushButton
+from core.database import db
+from PyQt6.QtCore import QTimer, Qt
+from ui.widgets.util.image_group import ImageGroup
+from PyQt6.QtCore import pyqtSlot
+from core.gallery_model import GalleryModel
+from core.thumbnail_generator import ThumbnailGenerator
+from ui.widgets.util.thumbnail_widget import ThumbnailWidget
+from core.profiler import profile, ProfileTimer
 
-class ThumbnailWidget(QWidget):
-    def __init__(self, file_path, gallery_model, thumbnail_generator, gallery_view, parent=None):
-        super().__init__(parent)
-        self.file_path = file_path
-        self.gallery_model = gallery_model
-        self.thumbnail_generator = thumbnail_generator
-        self.gallery_view = gallery_view
-        
-        self.setFixedSize(128, 128)
-        self.pixmap = None
-        self.is_selected = False
-        self.is_loaded = False
-        self.setMouseTracking(True)
-        
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        
-        # Draw Background
-        painter.fillRect(self.rect(), Theme.buttonColor)
-        
-        # Draw Image
-        if self.pixmap:
-            # Aspect Ratio Crop (Center)
-            # Scaling logic similar to QML's Image.PreserveAspectCrop
-            img_size = self.pixmap.size()
-            widget_size = self.size()
-            
-            scaled = self.pixmap.scaled(widget_size, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
-            
-            # Center crop
-            x = (scaled.width() - widget_size.width()) // 2
-            y = (scaled.height() - widget_size.height()) // 2
-            
-            painter.drawPixmap(0, 0, scaled, x, y, widget_size.width(), widget_size.height())
-        
-        # Draw Selection Overlay
-        if self.is_selected:
-            pen = painter.pen()
-            pen.setColor(Theme.highlightColor)
-            pen.setWidth(4)
-            painter.setPen(pen)
-            painter.drawRect(2, 2, self.width()-4, self.height()-4)
-            
-    def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton:
-            # Pass modifiers as integer to match GalleryModel expectation
-            modifiers = int(event.modifiers().value)
-            self.gallery_model.handle_selection(self.file_path, modifiers)
-        elif event.button() == Qt.MouseButton.RightButton:
-            if not self.is_selected:
-                self.gallery_model.handle_selection(self.file_path, 0)
-            # Context menu handled in contextMenuEvent
-            
-    def contextMenuEvent(self, event):
-        menu = QMenu(self)
-        
-        open_action = QAction("Open", self)
-        open_action.triggered.connect(lambda: self.gallery_view.open_image(self.file_path))
-        menu.addAction(open_action)
-        
-        reveal_action = QAction("Reveal in File Explorer", self)
-        reveal_action.triggered.connect(lambda: self.gallery_model.reveal_file(self.file_path))
-        menu.addAction(reveal_action)
-        
-        # Add Tag / Edit Tags
-        edit_tags_action = QAction("Edit Tags", self)
-        from ui.widgets.tag_edit_dialog import TagEditDialog
-        # Determine if we are editing single or multi
-        selected = self.gallery_model.get_selected_paths()
-        target = "" # Default multi
-        if len(selected) <= 1:
-            target = self.file_path
-        
-        edit_tags_action.triggered.connect(lambda: self.open_tag_dialog(target))
-        menu.addAction(edit_tags_action)
-        
-        menu.exec(event.globalPos())
-
-    def open_tag_dialog(self, target):
-        from ui.widgets.tag_edit_dialog import TagEditDialog
-        dialog = TagEditDialog(self.gallery_model, target_path=target, parent=self)
-        dialog.exec()
-
-    def mouseDoubleClickEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.gallery_view.open_image(self.file_path)
-
-    def set_selected(self, selected):
-        if self.is_selected != selected:
-            self.is_selected = selected
-            self.update()
-
-    def load_thumbnail(self):
-        if self.is_loaded:
-            return
-        # Display cached if available or request
-        # self.thumbnail_generator.request_thumbnail handles check
-        self.thumbnail_generator.request_thumbnail(self.file_path)
-
-    def set_thumbnail(self, path):
-        if os.path.exists(path):
-            self.pixmap = QPixmap(path)
-            self.is_loaded = True
-            self.update()
-
-class MonthWidget(QWidget):
-    def __init__(self, month_text, images, gallery_model, thumbnail_generator, gallery_view, parent=None):
-        super().__init__(parent)
-        self.gallery_model = gallery_model
-        self.thumbnail_generator = thumbnail_generator
-        self.gallery_view = gallery_view
-        self.image_widgets = []
-        
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-        self.setContentsMargins(0, 0, 0, 0)
-        
-        # Header
-        header = QLabel(month_text)
-        header.setStyleSheet(f"font-size: {Theme.fontSizeSubheader}px; font-weight: bold; padding: 10px;")
-        layout.addWidget(header)
-        
-        # Flow
-        self.flow_widget = QWidget()
-        self.flow_layout = FlowLayout(self.flow_widget)
-        self.flow_layout.setSpacing(Theme.spacingMedium)
-        
-        for img_data in images:
-            path = img_data['path']
-            tw = ThumbnailWidget(path, gallery_model, thumbnail_generator, gallery_view)
-            self.flow_layout.addWidget(tw)
-            self.image_widgets.append(tw)
-            
-        layout.addWidget(self.flow_widget)
+#TODO: rethink lazy loading to limit the queue size
 
 class GalleryView(QWidget):
-    def __init__(self, gallery_model, thumbnail_generator, parent=None):
-        super().__init__(parent)
-        self.gallery_model = gallery_model
-        self.thumbnail_generator = thumbnail_generator
-        
-        
-        # self.image_viewer = ImageViewer(self.gallery_model) # Now handled by MainWindow via open_image delegation
-        
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-        self.setContentsMargins(0, 0, 0, 0)
-        
-        # Filter Banner
-        self.filter_banner = QWidget()
-        self.filter_banner.setStyleSheet(f"background-color: {Theme.secondaryBackgroundColor.name()}; border-bottom: 1px solid {Theme.borderColor.name()};")
-        self.filter_banner.hide()
-        
-        banner_layout = QHBoxLayout(self.filter_banner)
-        banner_layout.setContentsMargins(10, 5, 10, 5)
-        
-        self.filter_label = QLabel("Filter Active")
-        self.filter_label.setStyleSheet(f"color: {Theme.textColor.name()}; font-weight: bold;")
-        banner_layout.addWidget(self.filter_label)
-        
-        banner_layout.addStretch()
-        
-        clear_btn = QPushButton("Clear Filter")
-        clear_btn.setStyleSheet(f"color: {Theme.highlightColor.name()}; border: 1px solid {Theme.highlightColor.name()}; padding: 4px 8px; border-radius: 4px;")
-        clear_btn.clicked.connect(self.gallery_model.clear_filter)
-        banner_layout.addWidget(clear_btn)
-        
-        self.layout.addWidget(self.filter_banner)
+  def __init__(self, parent=None):
+    super().__init__(parent)
+    self.gallery_model = GalleryModel.instance()
+    self.thumbnail_generator = ThumbnailGenerator.instance()
+    self.thumbnail_generator.thumbnailReady.connect(self.on_thumbnail_ready)
+    self.thumbnail_generator.queueEmpty.connect(self.on_queue_empty)
+    self.gallery_model.selectionChanged.connect(self.update_selection)
+    
+    # Reload view when model changes (e.g. filters applied)
+    self.gallery_model.countChanged.connect(self.populate_view)
+    self.gallery_model.filterChanged.connect(self.update_banner)
 
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        
-        self.content_widget = QWidget()
-        self.content_layout = QVBoxLayout(self.content_widget)
-        self.content_layout.setSpacing(Theme.spacingLarge)
-        
-        self.scroll_area.setWidget(self.content_widget)
-        self.layout.addWidget(self.scroll_area)
-        
-        # Connect Signals
-        self.gallery_model.countChanged.connect(self.reload_view)
-        # self.gallery_model.filterChanged.connect(self.reload_view) # Reload triggers content reset
-        self.gallery_model.filterChanged.connect(self.on_filter_changed)
-        self.gallery_model.selectionChanged.connect(self.update_selection)
-        self.thumbnail_generator.thumbnailReady.connect(self.on_thumbnail_ready)
-        
-        # Scroll Visibility Check
-        self.scroll_area.verticalScrollBar().valueChanged.connect(self.check_visibility)
-        
-        # Delayed check for initial load
-        QTimer.singleShot(100, self.check_visibility)
-        
-        # Initial Load
-        self.reload_view()
+    # month widgets, so we can do stuff to them later
+    self.month_widgets = []
+    # references to all thumbnail widgets, so we can update them when a thumbnail is ready
+    self.all_thumb_widgets = []
 
-    @pyqtSlot(str)
-    def open_image(self, path):
-        # Use model signal to request open image
-        self.gallery_model.request_open_image(path)
+    # Wait 50ms after scrolling etc. to update
+    self.update_timer = QTimer(self)
+    self.update_timer.setSingleShot(True)
+    self.update_timer.timeout.connect(self.update_months_visibility)
 
-    @pyqtSlot()
-    def on_filter_changed(self):
-        # Update Banner
-        active_filters = self.gallery_model.active_filters
-        if active_filters:
-            self.filter_banner.show()
-            # self.filter_label.setText(f"Filter Active: {len(active_filters)} criteria")
-        else:
-            self.filter_banner.hide()
-        
-        # self.reload_view() # Redundant: handled by countChanged via load_images
+    self.main_layout = QVBoxLayout(self)
+    
+    # --- Filter Banner ---
+    self.banner_container = QWidget()
+    self.banner_layout = QHBoxLayout(self.banner_container)
+    self.banner_layout.setContentsMargins(10, 5, 10, 5)
+    self.banner_layout.setSpacing(10)
+    
+    self.banner_label = QLabel()
+    self.banner_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+    
+    self.clear_filter_btn = QPushButton("Clear Filter")
+    self.clear_filter_btn.clicked.connect(self.gallery_model.clear_filter)
+    
+    self.banner_layout.addWidget(self.banner_label)
+    self.banner_layout.addWidget(self.clear_filter_btn)
+    self.banner_layout.addStretch()
+    
+    self.banner_container.setVisible(False)
+    self.main_layout.addWidget(self.banner_container)
 
-    @pyqtSlot()
-    def reload_view(self):
-        # Clear existing
-        while self.content_layout.count():
-            item = self.content_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-        
-        self.all_thumb_widgets = []
-        
-        count = self.gallery_model.rowCount()
-        for i in range(count):
-            idx = self.gallery_model.index(i, 0)
-            month_text = self.gallery_model.data(idx, self.gallery_model.MonthTextRole)
-            images = self.gallery_model.data(idx, self.gallery_model.ImagesRole)
-            
-            mw = MonthWidget(month_text, images, self.gallery_model, self.thumbnail_generator, self)
-            self.content_layout.addWidget(mw)
-            
-            self.all_thumb_widgets.extend(mw.image_widgets)
-            
-        self.content_layout.addStretch()
-        
-        # Update selection state
-        self.update_selection(self.gallery_model.get_selected_paths())
-        
-        # Check visibility
-        QTimer.singleShot(10, self.check_visibility)
+    # Scroll Area
+    self.scroll_area = QScrollArea(self)
+    self.scroll_area.setWidgetResizable(True)
+    self.main_layout.addWidget(self.scroll_area)
 
-    @pyqtSlot()
-    def check_visibility(self):
-        viewport_rect = self.scroll_area.viewport().rect()
-        
-        # Optimization: Check visibility of MonthWidgets first
-        # We need a list of MonthWidgets. We can reconstruct it or store it.
-        # We can iterate layout items.
-        
-        for i in range(self.content_layout.count()):
-            item = self.content_layout.itemAt(i)
-            mw = item.widget()
-            if not mw or not isinstance(mw, MonthWidget):
-                continue
-                
-            # Check if MonthWidget is visible
-            # Map mw position to viewport
-            mw_geo = mw.geometry()
-            # geometry() is in content_widget coordinates.
-            # We need to map to viewport? 
-            # content_widget is the widget OF scroll_area.
-            # So visible region of content_widget IS viewport_rect (shifted by scroll).
-            
-            # Better: map content_widget's visible rect to mw coords?
-            # Or map mw rect to viewport.
-            
-            # Simple check: 
-            # mw top < viewport bottom AND mw bottom > viewport top
-            
-            # Convert viewport rect to content coordinates
-            # visible_region = self.scroll_area.visibleRegion() # logic might be complex
-            
-            # Use mapToParent or mapTo(scroll_area.viewport())
-            # Since content_layout is on content_widget, and content_widget is child of viewport (via setWidget)
-            # Actually QScrollArea.widget() is a child of the viewport (or internal wrapper).
-            
-            # Let's just map the center or corners.
-            # Fast check using mapped rect
-            
-            p_top_left = mw.mapTo(self.scroll_area.viewport(), QPoint(0,0))
-            p_bottom_right = mw.mapTo(self.scroll_area.viewport(), QPoint(mw.width(), mw.height()))
-            
-            mw_rect_in_viewport = QRect(p_top_left, p_bottom_right)
-            
-            if viewport_rect.intersects(mw_rect_in_viewport):
-                # This month is visible, check thumbnails
-                for tw in mw.image_widgets:
-                    if tw.is_loaded:
-                        continue
-                    
-                    # Similar check for TW
-                    tw_p = tw.mapTo(self.scroll_area.viewport(), QPoint(0,0))
-                    tw_rect = QRect(tw_p, tw.size())
-                    
-                    if viewport_rect.intersects(tw_rect):
-                        tw.load_thumbnail()
+    # Container for month groups
+    self.container = QWidget(self.scroll_area)
+    self.container_layout = QVBoxLayout(self.container)
+    
+    self.container.setLayout(self.container_layout)
+    self.scroll_area.setWidget(self.container)
 
-    @pyqtSlot(str, str)
-    def on_thumbnail_ready(self, file_path, thumb_path):
-        for tw in self.all_thumb_widgets:
-            if tw.file_path == file_path:
-                tw.set_thumbnail(thumb_path)
+    self.scroll_area.verticalScrollBar().valueChanged.connect(self.request_update)
+    self.setLayout(self.main_layout)
+    
+    # Initial Population
+    self.populate_view()
 
-    @pyqtSlot(list)
-    def update_selection(self, selected_paths):
-        # Determine set for O(1) lookup
-        sel_set = set(selected_paths)
-        for tw in self.all_thumb_widgets:
-            tw.set_selected(tw.file_path in sel_set)
+  def resizeEvent(self, event):
+    super().resizeEvent(event)
+    self.request_update()
+
+  def request_update(self):
+    # set the timer back to zero
+    self.update_timer.start(50)
+    
+  @pyqtSlot()
+  @profile
+  def populate_view(self):
+    # Clear existing
+    for widget in self.month_widgets:
+        widget.deleteLater()
+    self.month_widgets = []
+    self.all_thumb_widgets = []
+    
+    # Remove spacers/items from layout
+    while self.container_layout.count():
+        child = self.container_layout.takeAt(0)
+        if child.widget():
+            child.widget().deleteLater()
+        elif child.spacerItem():
+            self.container_layout.removeItem(child)
+            
+    # Re-populate using Model data
+    sections = self.gallery_model._sections 
+    
+    with ProfileTimer("populate_view widget creation loop"):
+        for section in sections:
+            month_text = section['month_text']
+            
+            # Adapt model images (dict) to ImageGroup expectation (path, thumbnail)
+            model_images = section['images']
+            adapted_images = [(img['path'], img['thumbnailPath']) for img in model_images]
+            
+            month_widget = ImageGroup(self.container, month_text, adapted_images)
+            self.month_widgets.append(month_widget)
+            self.all_thumb_widgets.extend(month_widget.get_thumb_widgets())
+            self.container_layout.addWidget(month_widget)
+
+    with ProfileTimer("populate_view indices loop"):
+      # set the indices for all thumbnail widgets
+      for i in range(len(self.all_thumb_widgets)):
+        self.all_thumb_widgets[i].set_index(i)
+
+    self.container_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
+    # Important: adjustSize helps with scroll area
+    self.container.adjustSize()
+    
+    # Update visibility after layout is settled
+    # We might need to let the event loop process layout? 
+    # Use QTimer to defer execution until after layout calculations are complete
+    QTimer.singleShot(0, self.update_months_visibility)
+    
+    # Update Banner Visualization based on current model state
+    self.update_banner(self.gallery_model.get_active_filter())
+
+  @pyqtSlot(str)
+  def update_banner(self, filter_name):
+      if filter_name:
+          self.banner_label.setText(f"Filtering by: {filter_name}")
+          self.banner_container.setVisible(True)
+      else:
+          self.banner_container.setVisible(False)
+
+  @profile
+  def update_months_visibility(self):
+
+    # we need to calculate how many thumbnails could possibly be visible, to tell the thumbnail generator what its max queue size should be.
+    # crude way to do this: viewport dimensions / thumbnail dimensions
+    if ThumbnailWidget.THUMBNAIL_SIZE > 0:
+        num_thumbs_x = self.scroll_area.viewport().width() // ThumbnailWidget.THUMBNAIL_SIZE
+        num_thumbs_y = self.scroll_area.viewport().height() // ThumbnailWidget.THUMBNAIL_SIZE + 1
+        num_thumbs_total = num_thumbs_x * num_thumbs_y
+        self.thumbnail_generator.setMaxQueueSize(num_thumbs_total)
+    
+    # since we assume the view has changed, we will tell the thumbnail generator to clear its queue
+    self.thumbnail_generator.clearQueue()
+    
+    # Use Container-relative coordinates (much faster)
+    # The container is the widget inside the scroll area.
+    # The scrollbar value tells us how far down the viewport is.
+    min_y = self.scroll_area.verticalScrollBar().value()
+    viewport_height = self.scroll_area.viewport().height()
+    max_y = min_y + viewport_height
+
+    for month_widget in self.month_widgets:
+        month_widget.update_visibility(min_y, max_y)
+  
+  @pyqtSlot(int)
+  def on_thumbnail_ready(self, index):
+    if 0 <= index < len(self.all_thumb_widgets):
+        self.all_thumb_widgets[index].handle_thumbnail_ready()
+
+  @pyqtSlot()
+  def on_queue_empty(self):
+      # Wait a bit then re-check visibility to catch any missed thumbnails
+      # QTimer.singleShot(250, self.update_months_visibility)
+      # Force check for visible items without full visibility recalc
+      for month_widget in self.month_widgets:
+          month_widget.retry_load()
+
+  @pyqtSlot(list)
+  def update_selection(self, selected_paths):
+    sel_set = set(selected_paths)
+    for tw in self.all_thumb_widgets:
+        tw.set_selected(tw.image_path in sel_set)

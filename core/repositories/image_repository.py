@@ -285,3 +285,20 @@ class ImageRepository(BaseRepository):
         self.cursor.execute(query, params)
 
         return self.cursor.fetchall()
+    def get_filtered_images_with_month(self, filters=None):
+        """
+        Returns a list of (file_path, thumbnail_path, month_str) tuples, ordered by date descending.
+        """
+        if filters is None: filters = []
+        
+        where_clause, params = self._build_filter_conditions(filters)
+        
+        # We select the month string as well to group by it in the application
+        query = f"""
+            SELECT file_path, thumbnail_path, strftime('%Y-%m', datetime(date_taken, 'unixepoch')) AS month
+            FROM images 
+            {where_clause}
+            ORDER BY date_taken DESC
+        """
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()

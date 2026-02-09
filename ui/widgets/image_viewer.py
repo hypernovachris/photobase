@@ -6,9 +6,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSlot, QSize, QTimer, QEvent, QRectF, pyqtSignal
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QTransform, QAction, QColor, QFont
-from core.theme import Theme
 from ui.widgets.tag_edit_dialog import TagEditDialog
 from core.heic_provider import load_heic_to_qimage
+from core.gallery_model import GalleryModel
 import os
 
 class ZoomableGraphicsView(QGraphicsView):
@@ -35,47 +35,41 @@ class ZoomableGraphicsView(QGraphicsView):
         self.scale(zoom_factor, zoom_factor)
 
 class ImageDetailPanel(QWidget):
-    def __init__(self, gallery_model, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.gallery_model = gallery_model
+        self.gallery_model = GalleryModel.instance()
         self.current_path = ""
         
         self.setup_ui()
         
     def setup_ui(self):
         self.setFixedWidth(350)
-        self.setStyleSheet(f"background-color: {Theme.secondaryBackgroundColor.name()}; color: {Theme.textColor.name()};")
         
         layout = QVBoxLayout()
         self.setLayout(layout)
         
         # Header
         header = QLabel("Image Details")
-        header.setStyleSheet(f"font-size: {Theme.fontSizeHeader}px; font-weight: bold; margin-bottom: 10px;")
         layout.addWidget(header)
         
         # Info
         self.info_label = QLabel("Loading...")
         self.info_label.setWordWrap(True)
-        self.info_label.setStyleSheet(f"font-size: {Theme.fontSizeBody}px;")
         layout.addWidget(self.info_label)
         
         # Tags List
         layout.addWidget(QLabel("Tags:"))
         self.tags_list = QListWidget()
-        self.tags_list.setStyleSheet(f"background-color: {Theme.backgroundColor.name()}; border: 1px solid {Theme.borderColor.name()};")
         layout.addWidget(self.tags_list)
         
         # Edit Tags Button
         self.edit_tags_btn = QPushButton("Edit Tags")
         self.edit_tags_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {Theme.buttonColor.name()}; 
                 padding: 8px;
                 border-radius: 4px;
             }}
             QPushButton:hover {{
-                background-color: {Theme.highlightColor.name()};
                 color: white;
             }}
         """)
@@ -119,16 +113,16 @@ class ImageDetailPanel(QWidget):
         if not self.current_path:
             return
         
-        dialog = TagEditDialog(self.gallery_model, target_path=self.current_path, parent=self)
+        dialog = TagEditDialog(target_path=self.current_path, parent=self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_details(self.current_path) # Refresh
 
 class ImageViewer(QWidget):
     closeRequested = pyqtSignal()
 
-    def __init__(self, gallery_model, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.gallery_model = gallery_model
+        self.gallery_model = GalleryModel.instance()
         self.current_path = ""
         
         # self.setWindowTitle("Image Viewer") # Not needed as embedded
@@ -142,13 +136,11 @@ class ImageViewer(QWidget):
         # Toolbar / Header
         self.toolbar = QWidget()
         self.toolbar.setFixedHeight(50)
-        self.toolbar.setStyleSheet(f"background-color: {Theme.backgroundColor.name()};")
         toolbar_layout = QHBoxLayout(self.toolbar)
         toolbar_layout.setContentsMargins(10, 0, 10, 0)
         
         # Back Button
         back_btn = QPushButton("Back to Library")
-        back_btn.setStyleSheet(f"color: {Theme.textColor.name()}; border: none; font-weight: bold;")
         back_btn.setIcon(QIcon("assets/icons/arrow-left.svg")) # Placeholder if icon missing
         back_btn.clicked.connect(self.closeRequested.emit)
         toolbar_layout.addWidget(back_btn)
@@ -199,7 +191,7 @@ class ImageViewer(QWidget):
         content_layout.addWidget(self.view, 1)
         
         # Side Panel
-        self.detail_panel = ImageDetailPanel(self.gallery_model)
+        self.detail_panel = ImageDetailPanel()
         content_layout.addWidget(self.detail_panel)
         
         main_layout.addWidget(content)

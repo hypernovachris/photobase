@@ -4,12 +4,12 @@ from PyQt6.QtWidgets import (
     QListWidgetItem, QWidget
 )
 from PyQt6.QtCore import Qt, pyqtSlot
-from core.theme import Theme
+from core.gallery_model import GalleryModel
 
 class TagEditDialog(QDialog):
-    def __init__(self, gallery_model, target_path="", parent=None):
+    def __init__(self, target_path="", parent=None):
         super().__init__(parent)
-        self.gallery_model = gallery_model
+        self.gallery_model = GalleryModel.instance()
         self.target_path = target_path
         self.is_add_mode = (target_path == "") # Empty path means operating on selection (multi)
         
@@ -31,7 +31,6 @@ class TagEditDialog(QDialog):
         
         # Header
         header = QLabel("Add Tags" if self.is_add_mode else "Edit Tags")
-        header.setStyleSheet(f"font-size: {Theme.fontSizeBody}px; font-weight: bold;")
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(header)
         
