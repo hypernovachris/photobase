@@ -75,7 +75,7 @@ class ThumbnailWidget(QLabel):
     menu = QMenu(self)
     selected = self.gallery_model.get_selected_paths()
     
-    if len(selected) > 1:
+    if len(selected) <= 1:
       
       open_action = QAction("Open", self)
       open_action.triggered.connect(lambda: self.gallery_model.openImageRequested.emit(self.image_path))

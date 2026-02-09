@@ -42,14 +42,14 @@ class TagCard(QWidget):
         painter = QPainter(self)
         
         # Card Background
-        painter.drawRect(0, 0, self.width()-1, self.height()-1)
+        # painter.drawRect(0, 0, self.width(), self.height())
         
         # Image Area
         img_rect = QRect(10, 10, 140, 140)
-        painter.drawRect(img_rect)
+        # painter.drawRect(img_rect)
         
         if self.pixmap:
-            scaled = self.pixmap.scaled(img_rect.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
+            scaled = self.pixmap.scaled(img_rect.size(), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
             # Center crop
             x = img_rect.x() + (img_rect.width() - scaled.width()) // 2
             y = img_rect.y() + (img_rect.height() - scaled.height()) // 2
