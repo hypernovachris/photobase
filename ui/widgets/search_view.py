@@ -5,15 +5,36 @@ from PyQt6.QtWidgets import (
     QCalendarWidget
 )
 from PyQt6.QtCore import Qt, QSize, QDate
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor
 from ui.widgets.util.flow_layout import FlowLayout
 import json
 from core.gallery_model import GalleryModel
+
+def create_colored_pixmap(icon_path, color):
+    pm = QIcon(icon_path).pixmap(24, 24)
+    if pm.isNull():
+        return pm
+    colored = QPixmap(pm.size())
+    colored.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(colored)
+    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+    painter.drawPixmap(0, 0, pm)
+    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+    painter.fillRect(colored.rect(), color) 
+    painter.end()
+    return colored
 
 class FilterChip(QFrame):
     def __init__(self, text, on_close, parent=None):
         super().__init__(parent)
         self.setFixedHeight(30)
+        self.setStyleSheet("""
+            FilterChip {
+                background-color: #e0e0e0;
+                border-radius: 15px;
+                border: 1px solid #c0c0c0;
+            }
+        """)
         
         layout = QHBoxLayout()
         layout.setContentsMargins(10, 0, 5, 0)
@@ -24,8 +45,9 @@ class FilterChip(QFrame):
         label.setStyleSheet("border: none; background: transparent;")
         layout.addWidget(label)
         
-        close_btn = QPushButton("x")
+        close_btn = QPushButton()
         close_btn.setFixedSize(20, 20)
+        close_btn.setIcon(QIcon(create_colored_pixmap("assets/icons/x.svg", Qt.GlobalColor.black)))
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.setFlat(True)
         close_btn.setStyleSheet(f"""
@@ -56,6 +78,14 @@ class SearchView(QWidget):
         
         # Input Area (Chips)
         self.chips_container = QWidget()
+        self.chips_container.setObjectName("chips_container")
+        self.chips_container.setStyleSheet("""
+            #chips_container {
+                background-color: white;
+                border: 1px solid #c0c0c0;
+                border-radius: 4px;
+            }
+        """)
         self.chips_layout = QHBoxLayout(self.chips_container)
         self.chips_layout.setContentsMargins(5, 5, 5, 5)
         self.chips_layout.setSpacing(5)
@@ -70,12 +100,21 @@ class SearchView(QWidget):
         # Search Button
         self.search_btn = QPushButton()
         self.search_btn.setIcon(QIcon("assets/icons/search.svg"))
+
         self.search_btn.setIconSize(QSize(24, 24))
         self.search_btn.setFixedSize(50, 40)
         self.search_btn.setStyleSheet(f"""
             QPushButton {{
+                background-color: #0078D7;
+                color: white;
                 border: none;
                 border-radius: 4px;
+            }}
+            QPushButton:hover {{
+                background-color: #0063B1;
+            }}
+            QPushButton:disabled {{
+                background-color: #cccccc;
             }}
         """)
         self.search_btn.clicked.connect(self.perform_search)
@@ -164,7 +203,7 @@ class SearchView(QWidget):
 
     def create_icon_label(self, icon_path):
         lbl = QLabel()
-        pm = QIcon(icon_path).pixmap(24, 24)
+        pm = create_colored_pixmap(icon_path, Qt.GlobalColor.black)
         lbl.setPixmap(pm)
         lbl.setFixedSize(30, 30)
         return lbl
@@ -175,9 +214,16 @@ class SearchView(QWidget):
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setStyleSheet(f"""
             QPushButton {{
-                padding: 5px 15px;
+                background-color: #f0f0f0;
+                border: 1px solid #d0d0d0;
+                padding: 6px 12px;
                 text-align: left;
-                border-radius: 4px;
+                border-radius: 6px;
+                color: #333333;
+            }}
+            QPushButton:hover {{
+                background-color: #e0e0e0;
+                border-color: #b0b0b0;
             }}
         """)
         return btn

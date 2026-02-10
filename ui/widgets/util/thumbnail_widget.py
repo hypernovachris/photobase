@@ -97,6 +97,14 @@ class ThumbnailWidget(QLabel):
     
     edit_tags_action.triggered.connect(lambda: self.open_tag_dialog(target))
     menu.addAction(edit_tags_action)
+
+    # Remove from current tag filter
+    active_filters = self.gallery_model.active_filters
+    if len(active_filters) == 1 and active_filters[0].get('type') == 'tag':
+        tag_name = active_filters[0].get('value')
+        remove_action = QAction(f"Remove from {tag_name}", self)
+        remove_action.triggered.connect(lambda: self.gallery_model.remove_tag_from_selection(tag_name))
+        menu.addAction(remove_action)
     
     menu.exec(event.globalPos())
 

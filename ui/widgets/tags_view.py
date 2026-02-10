@@ -84,6 +84,30 @@ class TagCard(QWidget):
             self.pixmap = QPixmap(path)
             self.update()
 
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        rename_action = QAction("Rename", self)
+        rename_action.triggered.connect(self.rename_tag_action)
+        menu.addAction(rename_action)
+        menu.exec(event.globalPos())
+
+    def rename_tag_action(self):
+        old_name = self.tag_data['name']
+        new_name, ok = QInputDialog.getText(self, "Rename Tag", "New tag name:", text=old_name)
+        
+        if ok and new_name:
+            new_name = new_name.strip()
+            # Basic validation
+            if not new_name:
+                return
+            if new_name == old_name:
+                return
+
+            # Call model to rename
+            # We need the tag ID. 
+            tag_id = self.tag_data['id']
+            self.gallery_model.rename_tag(tag_id, new_name)
+
 class TagsView(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)

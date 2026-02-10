@@ -3,8 +3,12 @@ from .base_repository import BaseRepository
 
 class TagRepository(BaseRepository):
     def cleanup_orphan_tags(self):
-        # Only needed if foreign keys were off previously and items were deleted.
+        # Remove image_tags for non-existent images (referential integrity)
         self.cursor.execute("DELETE FROM image_tags WHERE image_id NOT IN (SELECT id FROM images)")
+        
+        # Remove tags that have no associated images
+        self.cursor.execute("DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM image_tags)")
+        
         self.connection.commit()
 
     def get_or_create_tag(self, name):

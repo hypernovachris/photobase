@@ -5,10 +5,11 @@ from PyQt6.QtWidgets import (
     QDialog, QSizePolicy, QGraphicsOpacityEffect, QStackedLayout
 )
 from PyQt6.QtCore import Qt, pyqtSlot, QSize, QTimer, QEvent, QRectF, pyqtSignal, QPointF, QPoint
-from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QAction, QColor, QBrush, QPen, QCursor
+from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QAction, QColor, QBrush, QPen, QCursor, QImageReader
 from ui.widgets.tag_edit_dialog import TagEditDialog
 from core.heic_provider import load_heic_to_qimage
 from core.gallery_model import GalleryModel
+from ui.widgets.util.flow_layout import FlowLayout
 import os
 
 class ZoomableGraphicsView(QGraphicsView):
@@ -22,7 +23,8 @@ class ZoomableGraphicsView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setStyleSheet("background: transparent;")
+        self.setStyleSheet("background: #000000;")
+        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         
         self.min_local_scale = 0.1 
         self.max_local_scale = 4.0
@@ -37,6 +39,7 @@ class ZoomableGraphicsView(QGraphicsView):
         
         if pixmap and not pixmap.isNull():
             self._pixmap_item = QGraphicsPixmapItem(pixmap)
+            self._pixmap_item.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
             self.scene().addItem(self._pixmap_item)
             self.setSceneRect(QRectF(pixmap.rect()))
             
@@ -123,6 +126,60 @@ class ZoomableGraphicsView(QGraphicsView):
         # Placeholder for boundary fixing if needed
         pass
 
+class TagChip(QFrame):
+    removeRequested = pyqtSignal(str)
+
+    def __init__(self, text, parent=None):
+        super().__init__(parent)
+        self.text = text
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.setObjectName("TagChip")
+        self.setStyleSheet("""
+            #TagChip {
+                background-color: #444;
+                border-radius: 12px;
+                border: 1px solid #555;
+            }
+            #TagChip:hover {
+                background-color: #555;
+                border: 1px solid #666;
+            }
+        """)
+        self.setFixedHeight(24)
+        
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 0, 4, 0) # Left padding for text, right for button
+        layout.setSpacing(4)
+        
+        # Tag Name
+        label = QLabel(self.text)
+        label.setStyleSheet("color: #eee; font-size: 11px; border: none; background: transparent;")
+        layout.addWidget(label)
+        
+        # Remove Button
+        btn = QPushButton("×")
+        btn.setFixedSize(16, 16)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.clicked.connect(lambda: self.removeRequested.emit(self.text))
+        btn.setStyleSheet("""
+            QPushButton {
+                color: #aaa;
+                border: none;
+                background: transparent;
+                font-size: 14px;
+                font-weight: bold;
+                padding-bottom: 2px;
+            }
+            QPushButton:hover {
+                color: #fff;
+                background: rgba(255, 255, 255, 30);
+                border-radius: 8px;
+            }
+        """)
+        layout.addWidget(btn)
+
 class ImageDetailPanel(QWidget):
     closeRequested = pyqtSignal()
     
@@ -134,6 +191,7 @@ class ImageDetailPanel(QWidget):
         
     def setup_ui(self):
         self.setFixedWidth(350)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet("background-color: #2b2b2b; color: #e0e0e0; border-left: 1px solid #3d3d3d;")
         
         layout = QVBoxLayout(self)
@@ -142,13 +200,17 @@ class ImageDetailPanel(QWidget):
         
         # Header
         header_layout = QHBoxLayout()
-        title = QLabel("Details")
-        title.setStyleSheet("font-size: 18px; font-weight: bold; border: none;")
-        header_layout.addWidget(title)
+        self.header_label = QLabel("Details")
+        self.header_label.setStyleSheet("font-size: 16px; font-weight: bold; border: none;")
+        self.header_label.setWordWrap(True)
+        self.header_label.setOpenExternalLinks(False)
+        self.header_label.linkActivated.connect(self.on_header_clicked)
+        header_layout.addWidget(self.header_label, 1)
         
         header_layout.addStretch()
         
-        close_btn = QPushButton("×")
+        close_btn = QPushButton()
+        close_btn.setIcon(QIcon("assets/icons/x.svg"))
         close_btn.setFixedSize(30, 30)
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.setStyleSheet("background: transparent; border: none; font-size: 20px; color: #aaaaaa;")
@@ -172,7 +234,7 @@ class ImageDetailPanel(QWidget):
         scroll.setWidget(content)
         layout.addWidget(scroll)
         
-    def add_metadata_row(self, icon_name, text, is_link=False):
+    def add_metadata_row(self, icon_name, text, is_link=False, on_click=None):
         row = QWidget()
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
@@ -182,22 +244,33 @@ class ImageDetailPanel(QWidget):
         icon_label = QLabel()
         icon_path = f"assets/icons/{icon_name}"
         if os.path.exists(icon_path):
-            pixmap = QPixmap(icon_path).scaled(20, 20, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            pixmap = QPixmap(icon_path).scaled(20, 20, Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
             if not pixmap.isNull():
                 img = pixmap.toImage()
-                img.invertPixels() # Simple inversion for white icons
                 icon_label.setPixmap(QPixmap.fromImage(img))
         icon_label.setFixedSize(24, 24)
         icon_label.setStyleSheet("border: none;")
         row_layout.addWidget(icon_label)
         
         # Text
-        text_label = QLabel(text)
+        text_label = QLabel()
         text_label.setWordWrap(True)
         text_label.setStyleSheet("border: none;")
+        
         if is_link:
-             text_label.setStyleSheet("color: #4facfe; text-decoration: underline; border: none;")
+             # Use HTML for link
+             # Ensure text is escaped if needed, but for filenames it's mostly fine or we should escape.
+             # Minimal escape:
+             safe_text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+             text_label.setText(f'<a href="#" style="color: #4facfe; text-decoration: underline;">{safe_text}</a>')
              text_label.setCursor(Qt.CursorShape.PointingHandCursor)
+             text_label.setTextFormat(Qt.TextFormat.RichText)
+             text_label.setOpenExternalLinks(False)
+             if on_click:
+                 text_label.linkActivated.connect(lambda link: on_click())
+        else:
+             text_label.setText(text)
+             
         row_layout.addWidget(text_label, 1)
         
         self.content_layout.addWidget(row)
@@ -216,10 +289,18 @@ class ImageDetailPanel(QWidget):
             return
 
         # Add Rows
+        # Filename in Header
+        filename = os.path.basename(path)
+        # Escape filename for HTML
+        safe_filename = filename.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        self.header_label.setText(f'<a href="#" style="color: #e0e0e0; text-decoration: none;">{safe_filename}</a>')
+        self.header_label.setToolTip("Click to open file")
+        self.header_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        
         # Path (Folder)
         folder_path = os.path.dirname(path)
         folder_name = os.path.basename(folder_path)
-        self.add_metadata_row("folder.svg", folder_name, is_link=True)
+        self.add_metadata_row("folder.svg", folder_name, is_link=True, on_click=lambda: self.gallery_model.reveal_file(path))
         
         self.add_metadata_row("calendar-clock.svg", details.get('date', 'Unknown'))
         self.add_metadata_row("hard-drive.svg", details.get('fileSize', 'Unknown'))
@@ -233,43 +314,70 @@ class ImageDetailPanel(QWidget):
         tags_header.setStyleSheet("font-weight: bold; margin-top: 20px; border: none;")
         self.content_layout.addWidget(tags_header)
         
+        # Flow Layout Container
+        tags_container = QWidget()
+        tags_container.setStyleSheet("background: transparent; border: none;")
+        self.tags_flow = FlowLayout(tags_container)
+        self.tags_flow.setContentsMargins(0, 0, 0, 0)
+        self.tags_flow.setSpacing(6)
+        self.content_layout.addWidget(tags_container)
+
         tags = details.get('tags', [])
         if tags:
-             tags_label = QLabel(", ".join(tags))
-             tags_label.setWordWrap(True)
-             tags_label.setStyleSheet("border: none;")
-             self.content_layout.addWidget(tags_label)
+             for tag in tags:
+                 chip = TagChip(tag)
+                 chip.removeRequested.connect(self.remove_tag)
+                 self.tags_flow.addWidget(chip)
         else:
              lbl = QLabel("No tags")
              lbl.setStyleSheet("color: #777; border: none;")
-             self.content_layout.addWidget(lbl)
+             self.tags_flow.addWidget(lbl) # Add to flow so it clears nicely next time? Or just add to flow.
              
         # Add Tag Button
+        add_tag_container = QWidget()
+        add_tag_layout = QHBoxLayout(add_tag_container)
+        add_tag_layout.setContentsMargins(0, 10, 0, 0) # Margin top
+        add_tag_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        
         add_tag_btn = QPushButton("Add Tag")
         add_tag_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        add_tag_btn.setIcon(QIcon("assets/icons/plus.svg"))
         add_tag_btn.setStyleSheet("""
             QPushButton {
-                background-color: #444;
-                color: white;
+                background-color: #333;
+                color: #ccc;
                 border-radius: 4px;
-                padding: 6px;
-                border: none;
+                padding: 6px 12px;
+                border: 1px solid #444;
             }
             QPushButton:hover {
-                background-color: #555;
+                background-color: #444;
+                color: white;
+                border: 1px solid #555;
             }
         """)
         add_tag_btn.clicked.connect(self.open_tag_dialog)
-        self.content_layout.addWidget(add_tag_btn)
+        add_tag_layout.addWidget(add_tag_btn)
+        
+        self.content_layout.addWidget(add_tag_container)
         
         self.content_layout.addStretch()
+
+    def remove_tag(self, tag_name):
+        if self.current_path:
+            self.gallery_model.remove_tag_from_image_path(self.current_path, tag_name)
+            self.load_details(self.current_path)
 
     def open_tag_dialog(self):
         if not self.current_path:
             return
-        dialog = TagEditDialog(target_path=self.current_path, parent=self)
+        dialog = TagEditDialog(target_path=self.current_path, parent=self, add_tags=True)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_details(self.current_path)
+
+    def on_header_clicked(self, link):
+        if self.current_path:
+            self.gallery_model.open_file(self.current_path)
 
 class ImageViewer(QWidget):
     closeRequested = pyqtSignal()
@@ -336,7 +444,7 @@ class ImageViewer(QWidget):
         self.back_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(0,0,0,100); 
-                border-radius: 20px; 
+                border-radius: 10px; 
                 border: 1px solid rgba(255,255,255,50);
             }
             QPushButton:hover {
@@ -353,13 +461,19 @@ class ImageViewer(QWidget):
         z_layout = QHBoxLayout(self.zoom_controls)
         z_layout.setContentsMargins(5, 5, 5, 5)
         
-        fit_btn = QPushButton("Fit")
+        fit_btn = QPushButton()
+        fit_btn.setIcon(QIcon("assets/icons/zoom_fit.svg"))
+        fit_btn.setFixedSize(24, 24)
+        fit_btn.setIconSize(QSize(24, 24))
         fit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         fit_btn.setStyleSheet("background: transparent; color: white; border: none; font-weight: bold;")
         fit_btn.clicked.connect(lambda: self.view.reset_zoom())
         z_layout.addWidget(fit_btn)
         
-        one_btn = QPushButton("1:1")
+        one_btn = QPushButton()
+        one_btn.setIcon(QIcon("assets/icons/zoom_1to1.svg"))
+        one_btn.setFixedSize(24, 24)
+        one_btn.setIconSize(QSize(24, 24))
         one_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         one_btn.setStyleSheet("background: transparent; color: white; border: none; font-weight: bold;")
         one_btn.clicked.connect(lambda: self.view.set_zoom_1to1())
@@ -374,7 +488,7 @@ class ImageViewer(QWidget):
         self.prev_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(0,0,0,100); 
-                border-radius: 25px; 
+                border-radius: 10px; 
                 border: 1px solid rgba(255,255,255,50);
             }
             QPushButton:hover {
@@ -390,7 +504,7 @@ class ImageViewer(QWidget):
         self.next_btn.setStyleSheet("""
             QPushButton {
                 background: rgba(0,0,0,100); 
-                border-radius: 25px; 
+                border-radius: 10px; 
                 border: 1px solid rgba(255,255,255,50);
             }
             QPushButton:hover {
@@ -464,7 +578,13 @@ class ImageViewer(QWidget):
              if not qimg.isNull():
                  pixmap = QPixmap.fromImage(qimg)
         else:
-             pixmap = QPixmap(self.current_path)
+             reader = QImageReader(self.current_path)
+             reader.setAutoTransform(True)
+             img = reader.read()
+             if not img.isNull():
+                 pixmap = QPixmap.fromImage(img)
+             else:
+                 pixmap = QPixmap() # Empty if failed
              
         self.view.set_image(pixmap)
 

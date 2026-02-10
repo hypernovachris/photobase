@@ -7,11 +7,11 @@ from PyQt6.QtCore import Qt, pyqtSlot
 from core.gallery_model import GalleryModel
 
 class TagEditDialog(QDialog):
-    def __init__(self, target_path="", parent=None):
+    def __init__(self, target_path="", parent=None, add_tags=False):
         super().__init__(parent)
         self.gallery_model = GalleryModel.instance()
         self.target_path = target_path
-        self.is_add_mode = (target_path == "") # Empty path means operating on selection (multi)
+        self.is_add_mode = (target_path == "") or add_tags # Empty path means operating on selection (multi)
         
         self.setWindowTitle("Add Tags" if self.is_add_mode else "Edit Tags")
         self.setMinimumWidth(300)
@@ -28,12 +28,7 @@ class TagEditDialog(QDialog):
     def setup_ui(self):
         layout = QVBoxLayout()
         self.setLayout(layout)
-        
-        # Header
-        header = QLabel("Add Tags" if self.is_add_mode else "Edit Tags")
-        header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(header)
-        
+                
         # New Tag Input
         input_layout = QHBoxLayout()
         self.new_tag_input = QLineEdit()

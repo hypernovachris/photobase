@@ -340,6 +340,9 @@ class GalleryModel(QAbstractListModel):
     def get_all_tags_model(self):
         """Returns a list of dictionaries for QML: name, count, thumbnail"""
         db.connect()
+        # Clean up tags before fetching
+        db.tags.cleanup_orphan_tags()
+        
         # Returns [(name, count, cover_path, cover_thumb_path), ...]
         rows = db.tags.get_tags_with_metadata()
         db.close()
