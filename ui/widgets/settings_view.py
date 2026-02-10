@@ -89,5 +89,15 @@ class SettingsView(QWidget):
             self.settings_controller.removePath(row)
 
     def show_about(self):
-        QMessageBox.about(self, "About Photobase", 
-                          "Photobase\n\nA photo management application.\n\nNow ported to Qt Widgets!")
+        QMessageBox.about(self, "Credits & License", 
+                          """Photobase Version 0.1.0 by Christopher Doss
+
+Lucide Icons
+Copyright © 2024 Lucide Contributors
+Licensed under the ISC License.
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+"lens" by Side Project, from Noun Project (CC BY 3.0). https://thenounproject.com/icon/lens-8154880/. Icon was modified to change the color to white and remove the text.
+
+Qt Framework
+This application uses the Qt Framework under the LGPL v3 license.""")
