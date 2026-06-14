@@ -64,8 +64,15 @@ class FlowLayout(QLayout):
         return size
 
     def _do_layout(self, rect, test_only):
-        x = rect.x()
-        y = rect.y()
+        margins = self.contentsMargins()
+        left = margins.left()
+        top = margins.top()
+        right = margins.right()
+        bottom = margins.bottom()
+
+        effective_rect = rect.adjusted(left, top, -right, -bottom)
+        x = effective_rect.x()
+        y = effective_rect.y()
         line_height = 0
         spacing = self.spacing()
 
@@ -82,8 +89,8 @@ class FlowLayout(QLayout):
             space_x = spacing + layout_spacing_x
             space_y = spacing + layout_spacing_y
             next_x = x + item.sizeHint().width() + space_x
-            if next_x - space_x > rect.right() and line_height > 0:
-                x = rect.x()
+            if next_x - space_x > effective_rect.right() and line_height > 0:
+                x = effective_rect.x()
                 y = y + line_height + space_y
                 next_x = x + item.sizeHint().width() + space_x
                 line_height = 0
@@ -94,4 +101,4 @@ class FlowLayout(QLayout):
             x = next_x
             line_height = max(line_height, item.sizeHint().height())
 
-        return y + line_height - rect.y()
+        return y + line_height - rect.y() + bottom

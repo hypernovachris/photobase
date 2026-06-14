@@ -72,7 +72,7 @@ class SearchView(QWidget):
         
         # 1. Search Bar Area
         search_bar_frame = QFrame()
-        search_bar_frame.setFixedHeight(60)
+        search_bar_frame.setMinimumHeight(60)
         search_bar_layout = QHBoxLayout(search_bar_frame)
         search_bar_layout.setContentsMargins(10, 10, 10, 10)
         
@@ -86,14 +86,20 @@ class SearchView(QWidget):
                 border-radius: 4px;
             }
         """)
-        self.chips_layout = QHBoxLayout(self.chips_container)
-        self.chips_layout.setContentsMargins(5, 5, 5, 5)
-        self.chips_layout.setSpacing(5)
-        self.chips_layout.addStretch() # Push items to left
+        
+        self.container_layout = QHBoxLayout(self.chips_container)
+        self.container_layout.setContentsMargins(0, 0, 0, 0)
         
         self.placeholder_label = QLabel("Start by adding a filter...")
-        self.placeholder_label.setStyleSheet(f"font-style: italic;")
-        self.chips_layout.insertWidget(0, self.placeholder_label)
+        self.placeholder_label.setStyleSheet("font-style: italic;")
+        self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.container_layout.addWidget(self.placeholder_label)
+        
+        self.chips_flow_widget = QWidget()
+        self.chips_layout = FlowLayout(self.chips_flow_widget)
+        self.chips_layout.setContentsMargins(5, 5, 5, 5)
+        self.chips_layout.setSpacing(5)
+        self.container_layout.addWidget(self.chips_flow_widget)
         
         search_bar_layout.addWidget(self.chips_container, 1)
         
@@ -263,23 +269,22 @@ class SearchView(QWidget):
             self.update_chips_display()
 
     def update_chips_display(self):
-        # Clear existing chips (except stretch which is at end)
-        # Actually standard clear and rebuild is safer.
+        # Clear existing chips
         while self.chips_layout.count():
             item = self.chips_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         
         if not self.active_filters:
-            self.placeholder_label = QLabel("Start by adding a filter...")
-            self.chips_layout.addWidget(self.placeholder_label)
-            self.chips_layout.addStretch()
+            self.placeholder_label.show()
+            self.chips_flow_widget.hide()
             self.search_btn.setEnabled(False)
         else:
+            self.placeholder_label.hide()
+            self.chips_flow_widget.show()
             for i, f in enumerate(self.active_filters):
                 chip = FilterChip(f["label"], lambda checked=False, idx=i: self.remove_filter(idx))
                 self.chips_layout.addWidget(chip)
-            self.chips_layout.addStretch()
             self.search_btn.setEnabled(True)
 
     def perform_search(self):
