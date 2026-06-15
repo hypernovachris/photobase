@@ -184,6 +184,12 @@ class GalleryModel(QAbstractListModel):
             self._selected_paths = new_selection_set
             self.selectionChanged.emit(list(self._selected_paths))
 
+    @pyqtSlot()
+    def clear_selection(self):
+        self._selected_paths.clear()
+        self.last_selected_path = None
+        self.selectionChanged.emit([])
+
     @pyqtSlot(str, result=bool)
     def is_selected(self, path):
         return path in self._selected_paths
@@ -204,6 +210,13 @@ class GalleryModel(QAbstractListModel):
             # TODO: cross platform
             import subprocess
             subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
+
+    @pyqtSlot(str, str, str)
+    def handle_file_moved(self, old_path, new_path, new_thumb_path):
+        db.connect()
+        db.images.update_image_path(old_path, new_path, new_thumb_path)
+        db.commit()
+        db.close()
 
     def _find_path_coordinates(self, path):
         # Returns (section_index, image_index)

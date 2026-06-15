@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QLabel, QMenu, QStyleOption, QStyle
+from PyQt6.QtWidgets import QLabel, QMenu, QStyleOption, QStyle, QFileDialog, QProgressDialog
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QAction, QMouseEvent, QPainter, QColor, QPen
 from core.thumbnail_generator import ThumbnailGenerator
@@ -105,8 +105,38 @@ class ThumbnailWidget(QLabel):
         remove_action = QAction(f"Remove from {tag_name}", self)
         remove_action.triggered.connect(lambda: self.gallery_model.remove_tag_from_selection(tag_name))
         menu.addAction(remove_action)
+        
+    move_action = QAction("Move to...", self)
+    move_action.triggered.connect(self.trigger_move)
+    menu.addAction(move_action)
     
     menu.exec(event.globalPos())
+
+  def trigger_move(self):
+    selected = self.gallery_model.get_selected_paths()
+    if not selected:
+      selected = [self.image_path]
+      
+    dest_dir = QFileDialog.getExistingDirectory(self, "Select Destination Directory")
+    if not dest_dir:
+      return
+      
+    self.progress_dialog = QProgressDialog("Moving files...", "Cancel", 0, len(selected), self)
+    self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+    self.progress_dialog.show()
+    
+    from ui.widgets.util.move_worker import MoveWorker
+    self.worker = MoveWorker(selected, dest_dir)
+    
+    self.worker.progress.connect(self.progress_dialog.setValue)
+    self.worker.fileMoved.connect(self.gallery_model.handle_file_moved)
+    self.worker.finished.connect(self.on_move_finished)
+    self.worker.start()
+
+  def on_move_finished(self):
+    self.progress_dialog.close()
+    self.gallery_model.clear_selection()
+    self.gallery_model.refresh()
 
   def open_tag_dialog(self, target):
     dialog = TagEditDialog(target_path=target, parent=self)
