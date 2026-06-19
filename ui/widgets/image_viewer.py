@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, 
+    QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QStyleOptionGraphicsItem,
     QPushButton, QFrame, QScrollArea, QListWidget, 
     QDialog, QSizePolicy, QGraphicsOpacityEffect, QStackedLayout
 )
@@ -11,6 +11,61 @@ from core.heic_provider import load_heic_to_qimage
 from core.gallery_model import GalleryModel
 from ui.widgets.util.flow_layout import FlowLayout
 import os
+import math
+
+class MipmappedGraphicsPixmapItem(QGraphicsPixmapItem):
+    def __init__(self, pixmap, parent=None):
+        super().__init__(pixmap, parent)
+        self._original_pixmap = pixmap
+        self._mipmaps = {1.0: pixmap}
+        
+        if pixmap and not pixmap.isNull():
+            current_pixmap = pixmap
+            current_scale = 1.0
+            # Progressively generate downscaled mipmaps down to ~5% scale or min 100px width/height
+            while current_pixmap.width() > 100 and current_pixmap.height() > 100 and current_scale > 0.05:
+                next_scale = current_scale * 0.5
+                next_width = int(current_pixmap.width() * 0.5)
+                next_height = int(current_pixmap.height() * 0.5)
+                if next_width <= 0 or next_height <= 0:
+                    break
+                next_pixmap = current_pixmap.scaled(
+                    next_width,
+                    next_height,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                self._mipmaps[next_scale] = next_pixmap
+                current_pixmap = next_pixmap
+                current_scale = next_scale
+
+        self.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
+
+    def paint(self, painter, option, widget=None):
+        if not self._original_pixmap or self._original_pixmap.isNull():
+            super().paint(painter, option, widget)
+            return
+
+        # Calculate level of detail (current zoom/scale factor)
+        lod = QStyleOptionGraphicsItem.levelOfDetailFromTransform(painter.worldTransform())
+
+        # Select the best mipmap level (smallest scale >= lod)
+        available_scales = sorted(self._mipmaps.keys(), reverse=True)
+        chosen_scale = 1.0
+        for scale in available_scales:
+            if scale >= lod:
+                chosen_scale = scale
+            else:
+                break
+
+        pixmap = self._mipmaps[chosen_scale]
+
+        # Draw the selected mipmap to fill the original bounding rect
+        painter.setRenderHint(
+            QPainter.RenderHint.SmoothPixmapTransform,
+            self.transformationMode() == Qt.TransformationMode.SmoothTransformation
+        )
+        painter.drawPixmap(self.boundingRect(), pixmap, QRectF(pixmap.rect()))
 
 class ZoomableGraphicsView(QGraphicsView):
     interactionOccurred = pyqtSignal()
@@ -38,8 +93,7 @@ class ZoomableGraphicsView(QGraphicsView):
         self.resetTransform()
         
         if pixmap and not pixmap.isNull():
-            self._pixmap_item = QGraphicsPixmapItem(pixmap)
-            self._pixmap_item.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
+            self._pixmap_item = MipmappedGraphicsPixmapItem(pixmap)
             self.scene().addItem(self._pixmap_item)
             self.setSceneRect(QRectF(pixmap.rect()))
             

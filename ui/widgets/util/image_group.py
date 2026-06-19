@@ -23,9 +23,7 @@ class ImageGroup(QWidget):
     self.thumb_widgets = []
 
     # add all the images for the month into the container
-    num_images = len(images)
-    for i in range(num_images - 1, -1, -1):
-      (image_path, thumb_path) = images[i]
+    for (image_path, thumb_path) in images:
       thumb_widget = ThumbnailWidget(self.thumbnails_container, image_path, thumb_path)
       self.container_layout.addWidget(thumb_widget)
       self.thumb_widgets.append(thumb_widget)
