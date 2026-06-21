@@ -1,8 +1,23 @@
 from PyQt6.QtCore import QAbstractListModel, Qt, QVariant, QModelIndex, QUrl, pyqtSlot, pyqtSignal, pyqtProperty
 from core.database import db
+from core.config import config
+import json
 import os
 from PIL import Image
 from core.profiler import profile
+
+def is_path_tracked(target_path, scan_paths):
+    if not target_path or not scan_paths:
+        return False
+    norm_target = os.path.normcase(os.path.abspath(target_path))
+    for sp in scan_paths:
+        norm_sp = os.path.normcase(os.path.abspath(sp))
+        try:
+            if os.path.commonpath([norm_sp, norm_target]) == norm_sp:
+                return True
+        except ValueError:
+            continue
+    return False
 
 def month_numericstr_to_text(numeric_month_str):
     if not numeric_month_str:
@@ -214,7 +229,16 @@ class GalleryModel(QAbstractListModel):
     @pyqtSlot(str, str, str)
     def handle_file_moved(self, old_path, new_path, new_thumb_path):
         db.connect()
-        db.images.update_image_path(old_path, new_path, new_thumb_path)
+        scan_paths = json.loads(config.get("General", "scan_paths", fallback="[]"))
+        if is_path_tracked(new_path, scan_paths):
+            db.images.update_image_path(old_path, new_path, new_thumb_path)
+        else:
+            db.images.remove_image(old_path)
+            if os.path.exists(new_thumb_path):
+                try:
+                    os.remove(new_thumb_path)
+                except OSError:
+                    pass
         db.commit()
         db.close()
 

@@ -60,9 +60,9 @@ class SettingsController(QObject):
         scanner.scan_and_update_images(self._scan_paths)
         db.close()
         
-        # Refresh gallery if available
-        if self.parent() and hasattr(self.parent(), "gallery_model"):
-            self.parent().gallery_model.refresh()
+        # Refresh gallery
+        from core.gallery_model import GalleryModel
+        GalleryModel.instance().refresh()
             
         # Close splash and restore windows
         splash.close()
