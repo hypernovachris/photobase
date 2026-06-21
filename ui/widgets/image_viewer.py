@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QFrame, QScrollArea, QListWidget, 
     QDialog, QSizePolicy, QGraphicsOpacityEffect, QStackedLayout
 )
-from PyQt6.QtCore import Qt, pyqtSlot, QSize, QTimer, QEvent, QRectF, pyqtSignal, QPointF, QPoint
+from PyQt6.QtCore import Qt, pyqtSlot, QSize, QTimer, QEvent, QRectF, pyqtSignal, QPointF, QPoint, QThread
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QAction, QColor, QBrush, QPen, QCursor, QImageReader
 from ui.widgets.tag_edit_dialog import TagEditDialog
 from core.heic_provider import load_heic_to_qimage
@@ -14,30 +14,33 @@ import os
 import math
 
 class MipmappedGraphicsPixmapItem(QGraphicsPixmapItem):
-    def __init__(self, pixmap, parent=None):
+    def __init__(self, pixmap, mipmaps=None, parent=None):
         super().__init__(pixmap, parent)
         self._original_pixmap = pixmap
-        self._mipmaps = {1.0: pixmap}
         
-        if pixmap and not pixmap.isNull():
-            current_pixmap = pixmap
-            current_scale = 1.0
-            # Progressively generate downscaled mipmaps down to ~5% scale or min 100px width/height
-            while current_pixmap.width() > 100 and current_pixmap.height() > 100 and current_scale > 0.05:
-                next_scale = current_scale * 0.5
-                next_width = int(current_pixmap.width() * 0.5)
-                next_height = int(current_pixmap.height() * 0.5)
-                if next_width <= 0 or next_height <= 0:
-                    break
-                next_pixmap = current_pixmap.scaled(
-                    next_width,
-                    next_height,
-                    Qt.AspectRatioMode.IgnoreAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self._mipmaps[next_scale] = next_pixmap
-                current_pixmap = next_pixmap
-                current_scale = next_scale
+        if mipmaps:
+            self._mipmaps = mipmaps
+        else:
+            self._mipmaps = {1.0: pixmap}
+            if pixmap and not pixmap.isNull():
+                current_pixmap = pixmap
+                current_scale = 1.0
+                # Progressively generate downscaled mipmaps down to ~5% scale or min 100px width/height
+                while current_pixmap.width() > 100 and current_pixmap.height() > 100 and current_scale > 0.05:
+                    next_scale = current_scale * 0.5
+                    next_width = int(current_pixmap.width() * 0.5)
+                    next_height = int(current_pixmap.height() * 0.5)
+                    if next_width <= 0 or next_height <= 0:
+                        break
+                    next_pixmap = current_pixmap.scaled(
+                        next_width,
+                        next_height,
+                        Qt.AspectRatioMode.IgnoreAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self._mipmaps[next_scale] = next_pixmap
+                    current_pixmap = next_pixmap
+                    current_scale = next_scale
 
         self.setTransformationMode(Qt.TransformationMode.SmoothTransformation)
 
@@ -88,12 +91,12 @@ class ZoomableGraphicsView(QGraphicsView):
         
         self._pixmap_item = None
 
-    def set_image(self, pixmap):
+    def set_image(self, pixmap, mipmaps=None):
         self.scene().clear()
         self.resetTransform()
         
         if pixmap and not pixmap.isNull():
-            self._pixmap_item = MipmappedGraphicsPixmapItem(pixmap)
+            self._pixmap_item = MipmappedGraphicsPixmapItem(pixmap, mipmaps)
             self.scene().addItem(self._pixmap_item)
             self.setSceneRect(QRectF(pixmap.rect()))
             
@@ -330,6 +333,26 @@ class ImageDetailPanel(QWidget):
         self.content_layout.addWidget(row)
         return row
 
+    def load_basic_details(self, path):
+        self.current_path = path
+        # Clear existing
+        while self.content_layout.count():
+            item = self.content_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+                
+        filename = os.path.basename(path)
+        safe_filename = filename.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        self.header_label.setText(f'<a href="#" style="color: #e0e0e0; text-decoration: none;">{safe_filename}</a>')
+        self.header_label.setToolTip("Click to open file")
+        self.header_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        # Add basic loading skeleton rows
+        self.add_metadata_row("folder.svg", "Loading folder...")
+        self.add_metadata_row("calendar-clock.svg", "Loading date...")
+        self.add_metadata_row("hard-drive.svg", "Loading size...")
+        self.add_metadata_row("size_icon.svg", "Loading dimensions...")
+
     def load_details(self, path):
         self.current_path = path
         # Clear existing
@@ -433,6 +456,68 @@ class ImageDetailPanel(QWidget):
         if self.current_path:
             self.gallery_model.open_file(self.current_path)
 
+class ImageLoaderThread(QThread):
+    image_loaded = pyqtSignal(str, QImage, object) # path, image, mipmaps
+    
+    def __init__(self, path):
+        super().__init__()
+        self.path = path
+        self._is_cancelled = False
+        
+    def cancel(self):
+        self._is_cancelled = True
+        
+    def run(self):
+        if self._is_cancelled:
+            return
+            
+        try:
+            lower_path = self.path.lower()
+            qimg = None
+            if lower_path.endswith('.heic') or lower_path.endswith('.heif'):
+                qimg = load_heic_to_qimage(self.path)
+            else:
+                reader = QImageReader(self.path)
+                reader.setAutoTransform(True)
+                qimg = reader.read()
+                
+            if qimg is None or qimg.isNull():
+                return
+                
+            if self._is_cancelled:
+                return
+                
+            # Compute mipmap QImages in the background
+            mipmaps = {1.0: qimg}
+            current_qimg = qimg
+            current_scale = 1.0
+            
+            while current_qimg.width() > 100 and current_qimg.height() > 100 and current_scale > 0.05:
+                if self._is_cancelled:
+                    return
+                next_scale = current_scale * 0.5
+                next_width = int(current_qimg.width() * 0.5)
+                next_height = int(current_qimg.height() * 0.5)
+                if next_width <= 0 or next_height <= 0:
+                    break
+                next_qimg = current_qimg.scaled(
+                    next_width,
+                    next_height,
+                    Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                mipmaps[next_scale] = next_qimg
+                current_qimg = next_qimg
+                current_scale = next_scale
+                
+            if self._is_cancelled:
+                return
+                
+            self.image_loaded.emit(self.path, qimg, mipmaps)
+            
+        except Exception as e:
+            print(f"Error loading image in background thread: {e}")
+
 class ImageViewer(QWidget):
     closeRequested = pyqtSignal()
 
@@ -468,6 +553,15 @@ class ImageViewer(QWidget):
         self.hide_timer.setInterval(2000)
         self.hide_timer.timeout.connect(self.hide_controls)
         self.hide_timer.start()
+        
+        self.loader_thread = None
+        self.active_threads = set()
+        
+        # Debounce timer for async image and metadata loading
+        self.debounce_timer = QTimer(self)
+        self.debounce_timer.setSingleShot(True)
+        self.debounce_timer.setInterval(150) # 150ms debounce
+        self.debounce_timer.timeout.connect(self.on_debounce_timeout)
         
         self.setMouseTracking(True)
         self.view.setMouseTracking(True)
@@ -617,30 +711,161 @@ class ImageViewer(QWidget):
 
     def open(self, path):
         self.current_path = path
-        self.detail_panel.load_details(path)
-        self.load_image()
-        self.show_controls()
         
-    def load_image(self):
-        if not os.path.exists(self.current_path):
-             return
-             
-        pixmap = None
-        lower_path = self.current_path.lower()
-        if lower_path.endswith('.heic') or lower_path.endswith('.heif'):
-             qimg = load_heic_to_qimage(self.current_path)
-             if not qimg.isNull():
-                 pixmap = QPixmap.fromImage(qimg)
+        # Cancel any active loader thread immediately to free up resources
+        try:
+            if self.loader_thread and self.loader_thread.isRunning():
+                self.loader_thread.cancel()
+                try:
+                    self.loader_thread.image_loaded.disconnect(self.on_image_loaded)
+                except TypeError:
+                    pass
+        except RuntimeError:
+            self.loader_thread = None
+            
+        # Stop debounce timer
+        self.debounce_timer.stop()
+        
+        # Show basic details immediately (filename and skeleton rows)
+        self.detail_panel.load_basic_details(path)
+        
+        # Load thumbnail placeholder immediately
+        self.load_thumbnail_placeholder()
+        
+        # Start debounce timer for loading full resolution and metadata
+        self.debounce_timer.start()
+        
+        self.show_controls()
+
+    def get_image_dimensions(self, path):
+        try:
+            lower_path = path.lower()
+            if lower_path.endswith('.heic') or lower_path.endswith('.heif'):
+                from PIL import Image
+                with Image.open(path) as img:
+                    return img.size
+            else:
+                reader = QImageReader(path)
+                if reader.supportsOption(QImageReader.ImageOption.Size):
+                    sz = reader.size()
+                    if sz.isValid():
+                        return sz.width(), sz.height()
+                from PIL import Image
+                with Image.open(path) as img:
+                    return img.size
+        except Exception:
+            return None
+
+    def create_placeholder_pixmap(self, thumb_path, original_width, original_height):
+        thumb = QPixmap(thumb_path)
+        if thumb.isNull():
+            return QPixmap()
+            
+        # Limit the placeholder QPixmap size to keep it lightweight (max 800px)
+        max_size = 800
+        aspect = original_width / original_height
+        if original_width > original_height:
+            w = max_size
+            h = int(max_size / aspect)
         else:
-             reader = QImageReader(self.current_path)
-             reader.setAutoTransform(True)
-             img = reader.read()
-             if not img.isNull():
-                 pixmap = QPixmap.fromImage(img)
-             else:
-                 pixmap = QPixmap() # Empty if failed
-             
-        self.view.set_image(pixmap)
+            h = max_size
+            w = int(max_size * aspect)
+            
+        if w <= 0 or h <= 0:
+            return thumb
+            
+        placeholder = QPixmap(w, h)
+        placeholder.fill(QColor(0, 0, 0)) # Fill black
+        
+        painter = QPainter(placeholder)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        
+        # Center the square thumbnail in the placeholder
+        if w > h:
+            # Landscape
+            target_rect = QRectF((w - h) / 2.0, 0.0, float(h), float(h))
+        else:
+            # Portrait/Square
+            target_rect = QRectF(0.0, (h - w) / 2.0, float(w), float(w))
+            
+        painter.drawPixmap(target_rect, thumb, QRectF(thumb.rect()))
+        painter.end()
+        return placeholder
+
+    def load_thumbnail_placeholder(self):
+        if not self.current_path or not os.path.exists(self.current_path):
+            self.view.set_image(QPixmap())
+            return
+            
+        import hashlib
+        thumb_hash = hashlib.md5(self.current_path.encode()).hexdigest()
+        thumb_path = os.path.join("thumbnails", f"{thumb_hash}.jpg")
+        
+        if os.path.exists(thumb_path):
+            size = self.get_image_dimensions(self.current_path)
+            if size:
+                w, h = size
+                placeholder = self.create_placeholder_pixmap(thumb_path, w, h)
+                self.view.set_image(placeholder)
+            else:
+                self.view.set_image(QPixmap(thumb_path))
+        else:
+            self.view.set_image(QPixmap()) # Black screen
+
+    def on_debounce_timeout(self):
+        # 1. Load full details (exif, etc.)
+        self.detail_panel.load_details(self.current_path)
+        
+        # 2. Start asynchronous loading of full image
+        self.start_async_load_image()
+
+    def start_async_load_image(self):
+        if not self.current_path or not os.path.exists(self.current_path):
+            return
+            
+        # Cancel and disconnect any existing thread
+        try:
+            if self.loader_thread and self.loader_thread.isRunning():
+                self.loader_thread.cancel()
+                try:
+                    self.loader_thread.image_loaded.disconnect(self.on_image_loaded)
+                except TypeError:
+                    pass
+        except RuntimeError:
+            self.loader_thread = None
+                
+        thread = ImageLoaderThread(self.current_path)
+        thread.image_loaded.connect(self.on_image_loaded)
+        # Protect against python GC
+        self.active_threads.add(thread)
+        
+        def cleanup(t=thread):
+            self.active_threads.discard(t)
+            try:
+                if self.loader_thread == t:
+                    self.loader_thread = None
+            except RuntimeError:
+                pass
+                
+        thread.finished.connect(cleanup)
+        thread.finished.connect(thread.deleteLater)
+        self.loader_thread = thread
+        thread.start()
+
+    def on_image_loaded(self, path, qimage, mipmap_qimages):
+        # Prevent race condition (discard if user already navigated away)
+        if path != self.current_path:
+            return
+            
+        pixmap = QPixmap.fromImage(qimage)
+        
+        # Convert mipmap QImages to QPixmaps
+        mipmaps = {}
+        for scale, qimg in mipmap_qimages.items():
+            if qimg and not qimg.isNull():
+                mipmaps[scale] = QPixmap.fromImage(qimg)
+            
+        self.view.set_image(pixmap, mipmaps)
 
     def next_image(self):
         next_path = self.gallery_model.get_next_image_path(self.current_path)
