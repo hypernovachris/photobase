@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QLabel, QMenu, QStyleOption, QStyle, QFileDialog, QProgressDialog
+from PyQt6.QtWidgets import QLabel, QMenu, QStyleOption, QStyle, QFileDialog, QProgressDialog, QMessageBox
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QAction, QMouseEvent, QPainter, QColor, QPen
 from core.thumbnail_generator import ThumbnailGenerator
@@ -110,7 +110,88 @@ class ThumbnailWidget(QLabel):
     move_action.triggered.connect(self.trigger_move)
     menu.addAction(move_action)
     
+    recycle_action = QAction("Move to Recycle Bin", self)
+    recycle_action.triggered.connect(self.trigger_recycle)
+    menu.addAction(recycle_action)
+    
     menu.exec(event.globalPos())
+
+  def trigger_recycle(self):
+    selected = self.gallery_model.get_selected_paths()
+    if not selected:
+      selected = [self.image_path]
+      
+    from ui.widgets.util.recycle_worker import can_recycle_path, RecycleWorker
+    
+    # 1. Pre-check if any files cannot be recycled
+    permanent_mode = False
+    if any(not can_recycle_path(path) for path in selected):
+      msg_box = QMessageBox(self)
+      msg_box.setWindowTitle("Warning")
+      msg_box.setText("The selected items cannot be recycled. Proceeding with this action will permanently delete them. Proceed anyway?")
+      proceed_button = msg_box.addButton("Proceed Anyway", QMessageBox.ButtonRole.AcceptRole)
+      cancel_button = msg_box.addButton(QMessageBox.StandardButton.Cancel)
+      msg_box.setDefaultButton(cancel_button)
+      msg_box.exec()
+      
+      if msg_box.clickedButton() == cancel_button:
+        return
+      permanent_mode = True
+
+    # 2. Confirmation dialogue
+    confirm_box = QMessageBox(self)
+    confirm_box.setWindowTitle("Confirm Action")
+    if permanent_mode:
+      confirm_box.setText(f"Permanently delete {len(selected)} items?")
+    else:
+      confirm_box.setText(f"Recycle {len(selected)} items?")
+      
+    yes_button = confirm_box.addButton(QMessageBox.StandardButton.Yes)
+    cancel_button = confirm_box.addButton(QMessageBox.StandardButton.Cancel)
+    confirm_box.setDefaultButton(cancel_button)
+    confirm_box.exec()
+    
+    if confirm_box.clickedButton() == cancel_button:
+      return
+
+    # 3. Show non-cancelable window-modal progress bar dialog
+    self.progress_dialog = QProgressDialog("Deleting files...", None, 0, len(selected), self)
+    self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+    self.progress_dialog.show()
+
+    # 4. Start worker
+    self.worker = RecycleWorker(selected, permanent_mode)
+    self.worker.progress.connect(self.progress_dialog.setValue)
+    self.worker.fileRemoved.connect(self.gallery_model.handle_file_removed)
+    self.worker.finished.connect(lambda succeeded: self.on_recycle_finished(succeeded, permanent_mode))
+    self.worker.error.connect(lambda err_msg, succeeded, total: self.on_recycle_error(err_msg, succeeded, total, permanent_mode))
+    self.worker.start()
+
+  def on_recycle_finished(self, succeeded, permanent_mode):
+    self.progress_dialog.close()
+    
+    action_text = "deleted" if permanent_mode else "recycled"
+    QMessageBox.information(
+      self,
+      "Success",
+      f"{succeeded} items successfully {action_text}"
+    )
+    
+    self.gallery_model.clear_selection()
+    self.gallery_model.refresh()
+
+  def on_recycle_error(self, err_msg, succeeded, total, permanent_mode):
+    self.progress_dialog.close()
+    
+    action_text = "permanently deleted" if permanent_mode else "recycled"
+    QMessageBox.warning(
+      self,
+      "Error",
+      f"An error occured. {succeeded}/{total} items were {action_text}"
+    )
+    
+    self.gallery_model.clear_selection()
+    self.gallery_model.refresh()
 
   def trigger_move(self):
     selected = self.gallery_model.get_selected_paths()

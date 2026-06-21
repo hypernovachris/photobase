@@ -242,6 +242,19 @@ class GalleryModel(QAbstractListModel):
         db.commit()
         db.close()
 
+    @pyqtSlot(str)
+    def handle_file_removed(self, path):
+        db.connect()
+        thumb_path = db.images.get_thumbnail_path(path)
+        db.images.remove_image(path)
+        if thumb_path and os.path.exists(thumb_path):
+            try:
+                os.remove(thumb_path)
+            except OSError:
+                pass
+        db.commit()
+        db.close()
+
     def _find_path_coordinates(self, path):
         # Returns (section_index, image_index)
         for s_idx, section in enumerate(self._sections):

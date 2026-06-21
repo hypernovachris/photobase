@@ -18,6 +18,10 @@ class ImageRepository(BaseRepository):
 
     def update_image_path(self, old_path, new_path, new_thumb_path):
         self.cursor.execute("UPDATE images SET file_path = ?, thumbnail_path = ? WHERE file_path = ?", (new_path, new_thumb_path, old_path))
+    def get_thumbnail_path(self, file_path):
+        self.cursor.execute("SELECT thumbnail_path FROM images WHERE file_path = ?", (file_path,))
+        row = self.cursor.fetchone()
+        return row[0] if row else None
     def remove_image(self, file_path):
         self.cursor.execute("DELETE FROM images WHERE file_path = ?", (file_path,))
     def get_all_images(self):
