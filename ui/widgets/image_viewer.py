@@ -408,7 +408,8 @@ class ImageDetailPanel(QWidget):
         else:
              lbl = QLabel("No tags")
              lbl.setStyleSheet("color: #777; border: none;")
-             self.tags_flow.addWidget(lbl) # Add to flow so it clears nicely next time? Or just add to flow.
+             # Add to flow to position it correctly and ensure it gets deleted when tags_container is cleared
+             self.tags_flow.addWidget(lbl)
              
         # Add Tag Button
         add_tag_container = QWidget()

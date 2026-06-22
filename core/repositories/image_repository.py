@@ -85,9 +85,8 @@ class ImageRepository(BaseRepository):
 
             # Delete database entries
             self.cursor.execute(f"DELETE FROM images WHERE file_path IN ({placeholders})", tuple(chunk))
-            # TODO: should we also remove tags?
-            # YES WE ABSOLUTELY MUST, make sure to remove any orphaned tags
-            # Make sure we're already doing this
+            # Orphaned tags are automatically cleaned up by the database trigger
+            # cleanup_tags_after_image_tag_delete on delete cascades.
         
         self.connection.commit()
 
@@ -219,7 +218,6 @@ class ImageRepository(BaseRepository):
                 pass
             
             if ftype == 'between' or ftype == 'date_between':
-                # val is JSON string now?
                 import json
                 try:
                     if isinstance(val, str):

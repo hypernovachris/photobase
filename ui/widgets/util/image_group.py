@@ -47,48 +47,46 @@ class ImageGroup(QWidget):
     fully_visible = top >= min_y and bottom <= max_y
     partially_obscured = not fully_visible
     
-    # If visibility state changed, OR if we haven't checked children yet (e.g. first run), we must update children
-    # Actually, if we are NOT visible, we don't strictly need to update children to "not visible" if they already are?
-    # But if we go from visible -> not visible, we must update children.
-    # If we go from not visible -> visible, we must update children.
-    # The only case we can skip is: not visible -> not visible.
-    
-    # Check if this is the first update? no easy way.
-    # But wait, self.is_in_view initializes to False.
-    # If we are effectively "not in view" (scrolled way down), we want to stay False.
-    # But if we were PREVIOUSLY in view, `self.is_in_view` would be True.
-    
-    # The issue: When clearing filters, we recreate ImageGroups. They start as `False` (not in view).
-    # `populate_view` creates them. `update_months_visibility` runs.
-    # If they are in view, `visibility` is True. `visibility != self.is_in_view` is True. We update children.
-    # If they are NOT in view, `visibility` is False. `visibility != self.is_in_view` is False.
-    # We RETURN early. Children are never told anything.
-    # Children initialize with `is_in_view = False`.
-    # So ... this logic seems correct for "not visible".
-    
-    # However, `partially_obscured` change also triggers update.
-    
-    # Why are thumbnails not loading then?
-    # Maybe `min_y`/`max_y` are wrong?
-    
     if visibility != self.is_in_view or partially_obscured != self.partially_obscured:
       self.is_in_view = visibility
       self.partially_obscured = partially_obscured
       
-      # Determine offset for children once
-      # self.thumbnails_container is a child of self
       container_offset_y = my_y + self.thumbnails_container.y()
-
-      for thumb_widget in self.thumb_widgets:
-        thumb_widget.update_visibility_fast(min_y, max_y, container_offset_y)
+      self._update_children_visibility(min_y, max_y, container_offset_y)
     elif self.is_in_view:
-        # Optimization: If we are still in view (state didn't change), we STILL might need to update children
-        # because the scroll position CHANGED, so some children might have moved in/out of view!
-        # This was the bug! We were skipping child updates just because the GROUP remained "in view".
+      container_offset_y = my_y + self.thumbnails_container.y()
+      self._update_children_visibility(min_y, max_y, container_offset_y)
+
+  def _update_children_visibility(self, min_y, max_y, container_offset_y):
+    if not self.thumb_widgets:
+        return
         
-        container_offset_y = my_y + self.thumbnails_container.y()
-        for thumb_widget in self.thumb_widgets:
-            thumb_widget.update_visibility_fast(min_y, max_y, container_offset_y)
+    width = self.thumbnails_container.width()
+    spacing = 10
+    thumb_width = ThumbnailWidget.THUMBNAIL_SIZE
+    col_width = thumb_width + spacing
+    cols = max(1, (width + spacing) // col_width)
+    
+    for r in range(0, len(self.thumb_widgets), cols):
+        row_widgets = self.thumb_widgets[r : r + cols]
+        if not row_widgets:
+            continue
+            
+        first_widget = row_widgets[0]
+        y_coord = first_widget.y()
+        height = first_widget.height()
+        
+        top = container_offset_y + y_coord
+        bottom = top + height
+        row_in_view = bottom >= min_y and top <= max_y
+        
+        for widget in row_widgets:
+            if row_in_view != widget.is_in_view:
+                widget.is_in_view = row_in_view
+                if row_in_view:
+                    widget.refresh()
+                else:
+                    widget.hide_image()
 
   def retry_load(self):
     if self.is_in_view:
@@ -97,5 +95,3 @@ class ImageGroup(QWidget):
 
   def get_thumb_widgets(self):
     return self.thumb_widgets
-
-#TODO: We can skip updating EVERY image by using the fact that only an entire row can become visible at a time!

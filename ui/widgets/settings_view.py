@@ -59,7 +59,6 @@ class SettingsView(QWidget):
         
         apply_btn = QPushButton("Apply Changes")
         apply_btn.clicked.connect(self.settings_controller.applyChanges)
-        # Style Apply Button to be prominent?
         btn_layout.addWidget(apply_btn)
         
         gal_layout.addLayout(btn_layout)

@@ -99,15 +99,18 @@ class Database:
       )
     """)
 
-    self.connection.commit()
+    # Automatic trigger to clean up orphaned tags when relations are removed
+    self.cursor.execute("""
+      CREATE TRIGGER IF NOT EXISTS cleanup_tags_after_image_tag_delete
+      AFTER DELETE ON image_tags
+      BEGIN
+          DELETE FROM tags
+          WHERE id = OLD.tag_id
+            AND NOT EXISTS (SELECT 1 FROM image_tags WHERE tag_id = OLD.tag_id);
+      END;
+    """)
 
-    # cleanup_orphan_tags is now in TagRepository, but we can't call it here 
-    # freely unless we init repo first. 
-    # For now, let's init repos in connect() AFTER table creation, which is what we do.
-    # We can call it there if needed, or just let the repo handle it if called explicitly.
-    # The original called it at the end of create_table...
-    # We'll rely on the user/system calling it, or move it to connect().
-    # TODO: wtf? figure out what to do
+    self.connection.commit()
 
   def close(self):
     if self.connection:

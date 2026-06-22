@@ -222,7 +222,6 @@ class GalleryModel(QAbstractListModel):
     def reveal_file(self, path):
         if os.path.exists(path):
             # Windows specific explorer selection
-            # TODO: cross platform
             import subprocess
             subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
 
@@ -606,9 +605,6 @@ class GalleryModel(QAbstractListModel):
     def remove_tag_from_image_path(self, file_path, tag_name):
         db.connect()
         img_id = db.images.get_image_id(file_path)
-        # We need tag id
-        # get_or_create is safe? Yes, if it exists we get ID. If not created, we get ID.
-        # If we remove a tag that doesn't exist, nothing happens.
         tag_id = db.tags.get_or_create_tag(tag_name)
         if img_id and tag_id:
              db.tags.remove_tag_from_image(img_id, tag_id)

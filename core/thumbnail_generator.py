@@ -30,11 +30,11 @@ class ThumbnailRunnable(QRunnable):
             self.success_signal.emit(self.index)            
         except Exception as e:
             print(f"Error generating thumbnail for {self.file_path}: {e}")
-            self.failure_signal.emit(self.file_path)
+            self.failure_signal.emit(self.index)
 
 class ThumbnailGenerator(QObject):
     thumbnailReady = pyqtSignal(int) # index
-    thumbnailFailed = pyqtSignal(str) # file_path
+    thumbnailFailed = pyqtSignal(int) # index
     queueEmpty = pyqtSignal()
 
     _instance = None
@@ -112,10 +112,10 @@ class ThumbnailGenerator(QObject):
         # Process next in queue
         self.process_queue()
 
-    # Failure handler (Using string for failure for now as per signal def, but could change to index)
-    def _on_thumbnail_failed(self, file_path):
-        # We might not know the index easily here unless we change the signal
-        # For now, just decrement tasks
+    # Failure handler
+    def _on_thumbnail_failed(self, index):
+        if index in self.pending_requests:
+            self.pending_requests.remove(index)
             
         self.active_tasks -= 1
         # Process next in queue

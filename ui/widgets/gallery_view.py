@@ -8,7 +8,6 @@ from core.thumbnail_generator import ThumbnailGenerator
 from ui.widgets.util.thumbnail_widget import ThumbnailWidget
 from core.profiler import profile, ProfileTimer
 
-#TODO: rethink lazy loading to limit the queue size
 
 class GalleryView(QWidget):
   def __init__(self, parent=None):
@@ -123,7 +122,6 @@ class GalleryView(QWidget):
     self.container.adjustSize()
     
     # Update visibility after layout is settled
-    # We might need to let the event loop process layout? 
     # Use QTimer to defer execution until after layout calculations are complete
     QTimer.singleShot(0, self.update_months_visibility)
     
