@@ -3,17 +3,18 @@ import sqlite3
 from .base_repository import BaseRepository
 
 class ImageRepository(BaseRepository):
-    def add_or_update_image(self, file_path, last_modified, thumbnail_path, camera=None, lens=None, date_taken=None):
+    def add_or_update_image(self, file_path, last_modified, thumbnail_path, camera=None, lens=None, date_taken=None, month_str=None):
         self.cursor.execute("""
-          INSERT INTO images (file_path, last_modified, thumbnail_path, camera, lens, date_taken)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO images (file_path, last_modified, thumbnail_path, camera, lens, date_taken, month_str)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(file_path) DO UPDATE SET
             last_modified = excluded.last_modified,
             date_taken = excluded.date_taken,
+            month_str = excluded.month_str,
             thumbnail_path = excluded.thumbnail_path,
             camera = COALESCE(excluded.camera, images.camera),
             lens = COALESCE(excluded.lens, images.lens)
-        """, (file_path, last_modified, thumbnail_path, camera, lens, date_taken))
+        """, (file_path, last_modified, thumbnail_path, camera, lens, date_taken, month_str))
         # Commit removed - handled by main helper or batched
 
     def update_image_path(self, old_path, new_path, new_thumb_path):
@@ -254,13 +255,13 @@ class ImageRepository(BaseRepository):
         where_clause, params = self._build_filter_conditions(filters)
         
         query = f"""
-            SELECT DISTINCT strftime('%Y-%m', datetime(date_taken, 'unixepoch')) AS month 
+            SELECT DISTINCT month_str
             FROM images 
             {where_clause}
-            ORDER BY month DESC
+            ORDER BY month_str DESC
         """
         self.cursor.execute(query, params)
-        return [row[0] for row in self.cursor.fetchall()]
+        return [row[0] for row in self.cursor.fetchall() if row[0] is not None]
 
     def get_filtered_images(self, month_str, filters=None):
         """
@@ -273,7 +274,7 @@ class ImageRepository(BaseRepository):
         # We need to add the month condition to the WHERE clause using AND
         # If where_clause is empty, start with WHERE. Else append AND.
         
-        month_condition = "strftime('%Y-%m', datetime(date_taken, 'unixepoch')) = ?"
+        month_condition = "month_str = ?"
         
         if where_clause:
             final_where = f"{where_clause} AND {month_condition}"
@@ -301,7 +302,7 @@ class ImageRepository(BaseRepository):
         
         # We select the month string as well to group by it in the application
         query = f"""
-            SELECT file_path, thumbnail_path, strftime('%Y-%m', datetime(date_taken, 'unixepoch')) AS month
+            SELECT file_path, thumbnail_path, month_str
             FROM images 
             {where_clause}
             ORDER BY date_taken DESC

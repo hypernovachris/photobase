@@ -137,7 +137,14 @@ class ImageScanner:
                 if not date_taken:
                     date_taken = mtime
                 
-                files_to_update.append((file_path, mtime, thumb_path, camera, lens, date_taken))
+                import datetime
+                try:
+                    dt = datetime.datetime.fromtimestamp(date_taken)
+                    month_str = dt.strftime("%Y-%m")
+                except (ValueError, OSError, OverflowError):
+                    month_str = "Unknown"
+                
+                files_to_update.append((file_path, mtime, thumb_path, camera, lens, date_taken, month_str))
 
                 
           except OSError:

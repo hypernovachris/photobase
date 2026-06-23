@@ -29,6 +29,8 @@ class Database:
   def create_table_if_not_exists(self):
     # Enable foreign keys
     self.cursor.execute("PRAGMA foreign_keys = ON;")
+    self.cursor.execute("PRAGMA journal_mode = WAL;")
+    self.cursor.execute("PRAGMA synchronous = NORMAL;")
     
     self.cursor.execute("""
       CREATE TABLE IF NOT EXISTS images (
@@ -36,6 +38,7 @@ class Database:
         file_path TEXT UNIQUE,
         last_modified INTEGER,
         date_taken INTEGER,
+        month_str TEXT,
         thumbnail_path TEXT,
         scanned_for_faces INTEGER DEFAULT 0,
         camera TEXT,
@@ -74,13 +77,44 @@ class Database:
                 
             if updates:
                 self.cursor.executemany("UPDATE images SET date_taken = ? WHERE id = ?", updates)
-                self.connection.commit()
-                print(f"Migrated {len(updates)} images.")
+            print(f"Migrated {len(updates)} images.")
         except ImportError:
             print("Could not import get_date_taken for migration backfill.")
             pass
 
+    # Schema Migration: Add month_str if it doesn't exist
+    try:
+        self.cursor.execute("SELECT month_str FROM images LIMIT 1")
+    except sqlite3.OperationalError:
+        print("Migrating database: Adding month_str column...")
+        self.cursor.execute("ALTER TABLE images ADD COLUMN month_str TEXT")
+        
+        # Backfill existing images
+        print("Migrating database: Backfilling month_str for existing images...")
+        self.cursor.execute("SELECT id, date_taken, last_modified FROM images")
+        rows = self.cursor.fetchall()
+        
+        import datetime
+        updates = []
+        for row in rows:
+            img_id, date_taken, last_modified = row
+            dt_val = date_taken if date_taken is not None else last_modified
+            try:
+                dt = datetime.datetime.fromtimestamp(dt_val)
+                m_str = dt.strftime("%Y-%m")
+            except (ValueError, OSError, OverflowError, TypeError):
+                m_str = "Unknown"
+            updates.append((m_str, img_id))
+            
+        if updates:
+            self.cursor.executemany("UPDATE images SET month_str = ? WHERE id = ?", updates)
+            self.connection.commit()
+            print(f"Migrated {len(updates)} images with month_str.")
 
+    # Indices for performance
+    self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_images_date_taken ON images(date_taken DESC)")
+    self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_images_month_str ON images(month_str)")
+    self.cursor.execute("CREATE INDEX IF NOT EXISTS idx_image_tags_tag_id ON image_tags(tag_id)")
 
     # Tagging support
     self.cursor.execute("""

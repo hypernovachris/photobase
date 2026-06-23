@@ -55,6 +55,8 @@ class GalleryModel(QAbstractListModel):
              super().__init__(parent)
              GalleryModel._instance = self
         self._sections = []
+        self._rows = []
+        self._cols = 4 # Default column count
         self._active_filters = []
         # Support legacy properties for active filter display
         self._active_filter_name = ""
@@ -68,21 +70,52 @@ class GalleryModel(QAbstractListModel):
         }
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self._sections)
+        return len(self._rows)
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if not index.isValid() or not (0 <= index.row() < len(self._sections)):
+        if not index.isValid() or not (0 <= index.row() < len(self._rows)):
             return QVariant()
         
-        section = self._sections[index.row()]
+        row_item = self._rows[index.row()]
         
         if role == GalleryModel.MonthTextRole:
-            return section['month_text']
+            return row_item.get('month_text', '')
         elif role == GalleryModel.ImagesRole:
-            return section['images']
+            return row_item.get('images', [])
+        elif role == Qt.ItemDataRole.UserRole:
+            return row_item
             
         return QVariant()
     
+    def _rebuild_rows(self):
+        self.beginResetModel()
+        self._rows = []
+        for s_idx, section in enumerate(self._sections):
+            self._rows.append({
+                "type": "header",
+                "month_text": section["month_text"],
+                "month_index": s_idx
+            })
+            
+            images = section["images"]
+            for i in range(0, len(images), self._cols):
+                chunk = images[i : i + self._cols]
+                self._rows.append({
+                    "type": "images",
+                    "images": chunk,
+                    "month_index": s_idx,
+                    "row_in_month": i // self._cols
+                })
+        self.endResetModel()
+
+    @pyqtSlot(int)
+    def set_columns(self, cols):
+        if cols < 1:
+            cols = 1
+        if self._cols != cols:
+            self._cols = cols
+            self._rebuild_rows()
+
     @pyqtSlot(int, result=int)
     def getImageCountForMonth(self, monthIndex):
         if 0 <= monthIndex < len(self._sections):
@@ -96,7 +129,6 @@ class GalleryModel(QAbstractListModel):
 
     @profile
     def load_images(self):
-        self.beginResetModel()
         self._sections = []
         db.connect()
         
@@ -123,7 +155,7 @@ class GalleryModel(QAbstractListModel):
              })
             
         db.close()
-        self.endResetModel()
+        self._rebuild_rows()
         self.countChanged.emit()
 
     countChanged = pyqtSignal()
