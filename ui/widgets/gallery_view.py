@@ -20,15 +20,43 @@ class GalleryView(QWidget):
     
     # --- Filter Banner ---
     self.banner_container = QWidget()
+    self.banner_container.setObjectName("bannerContainer")
+    self.banner_container.setStyleSheet("""
+        #bannerContainer {
+            background-color: #002d54;
+            border: 1px solid #0078d4;
+            border-radius: 6px;
+        }
+        QLabel {
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 13px;
+            border: none;
+            background: transparent;
+        }
+    """)
     self.banner_layout = QHBoxLayout(self.banner_container)
-    self.banner_layout.setContentsMargins(10, 5, 10, 5)
-    self.banner_layout.setSpacing(10)
+    self.banner_layout.setContentsMargins(12, 6, 12, 6)
+    self.banner_layout.setSpacing(12)
     
     self.banner_label = QLabel()
-    self.banner_label.setStyleSheet("font-weight: bold; font-size: 14px;")
     
     self.clear_filter_btn = QPushButton("Clear Filter")
     self.clear_filter_btn.clicked.connect(self.gallery_model.clear_filter)
+    self.clear_filter_btn.setStyleSheet("""
+        QPushButton {
+            background-color: #ef4444;
+            border: 1px solid #ef4444;
+            color: white;
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #dc2626;
+            border-color: #dc2626;
+        }
+    """)
     
     self.banner_layout.addWidget(self.banner_label)
     self.banner_layout.addWidget(self.clear_filter_btn)

@@ -27,6 +27,12 @@ if __name__ == "__main__":
 
   app = QApplication(sys.argv)
   
+  # Load global QSS stylesheet
+  qss_path = os.path.join(os.path.dirname(__file__), "ui", "style.qss")
+  if os.path.exists(qss_path):
+      with open(qss_path, "r", encoding="utf-8") as f:
+          app.setStyleSheet(f.read())
+  
   # show a splash screen
   splash = QSplashScreen()
   splash.showMessage("Updating database...", alignment=Qt.AlignmentFlag.AlignCenter)

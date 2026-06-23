@@ -450,7 +450,7 @@ class ImageDetailPanel(QWidget):
     def open_tag_dialog(self):
         if not self.current_path:
             return
-        dialog = TagEditDialog(target_path=self.current_path, parent=self, add_tags=True)
+        dialog = TagEditDialog(target_path=self.current_path, parent=self.window(), add_tags=True)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_details(self.current_path)
 

@@ -63,7 +63,7 @@ class GalleryItemDelegate(QStyledItemDelegate):
         if item.get("type") == "header":
             # Paint Header
             month_text = item.get("month_text", "")
-            painter.setPen(option.palette.windowText().color())
+            painter.setPen(QColor("#e4e4e7"))
             font = painter.font()
             font.setBold(True)
             font.setPointSize(14)

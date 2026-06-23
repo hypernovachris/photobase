@@ -30,9 +30,9 @@ class FilterChip(QFrame):
         self.setFixedHeight(30)
         self.setStyleSheet("""
             FilterChip {
-                background-color: #e0e0e0;
+                background-color: #002d54;
                 border-radius: 15px;
-                border: 1px solid #c0c0c0;
+                border: 1px solid #0078d4;
             }
         """)
         
@@ -42,17 +42,16 @@ class FilterChip(QFrame):
         self.setLayout(layout)
         
         label = QLabel(text)
-        label.setStyleSheet("border: none; background: transparent;")
+        label.setStyleSheet("border: none; background: transparent; color: #ffffff; font-weight: 500;")
         layout.addWidget(label)
         
         close_btn = QPushButton()
         close_btn.setFixedSize(20, 20)
-        close_btn.setIcon(QIcon(create_colored_pixmap("assets/icons/x.svg", Qt.GlobalColor.black)))
+        close_btn.setIcon(QIcon(create_colored_pixmap("assets/icons/x.svg", QColor("#e4e4e7"))))
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.setFlat(True)
         close_btn.setStyleSheet(f"""
-            QPushButton {{ border: none; font-weight: bold; }}
-            QPushButton:hover {{ color: red; }}
+            QPushButton {{ border: none; }}
         """)
         close_btn.clicked.connect(on_close)
         layout.addWidget(close_btn)
@@ -81,9 +80,9 @@ class SearchView(QWidget):
         self.chips_container.setObjectName("chips_container")
         self.chips_container.setStyleSheet("""
             #chips_container {
-                background-color: white;
-                border: 1px solid #c0c0c0;
-                border-radius: 4px;
+                background-color: #161622;
+                border: 1px solid #2c2c3e;
+                border-radius: 6px;
             }
         """)
         
@@ -91,7 +90,7 @@ class SearchView(QWidget):
         self.container_layout.setContentsMargins(0, 0, 0, 0)
         
         self.placeholder_label = QLabel("Start by adding a filter...")
-        self.placeholder_label.setStyleSheet("font-style: italic;")
+        self.placeholder_label.setStyleSheet("font-style: italic; color: #71717a;")
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.container_layout.addWidget(self.placeholder_label)
         
@@ -105,24 +104,10 @@ class SearchView(QWidget):
         
         # Search Button
         self.search_btn = QPushButton()
-        self.search_btn.setIcon(QIcon("assets/icons/search.svg"))
+        self.search_btn.setIcon(QIcon(create_colored_pixmap("assets/icons/search.svg", Qt.GlobalColor.white)))
 
-        self.search_btn.setIconSize(QSize(24, 24))
+        self.search_btn.setIconSize(QSize(20, 20))
         self.search_btn.setFixedSize(50, 40)
-        self.search_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #0078D7;
-                color: white;
-                border: none;
-                border-radius: 4px;
-            }}
-            QPushButton:hover {{
-                background-color: #0063B1;
-            }}
-            QPushButton:disabled {{
-                background-color: #cccccc;
-            }}
-        """)
         self.search_btn.clicked.connect(self.perform_search)
         self.search_btn.setEnabled(False)
         search_bar_layout.addWidget(self.search_btn)
@@ -148,10 +133,27 @@ class SearchView(QWidget):
         self.negate_btn.setCheckable(True)
         self.negate_btn.clicked.connect(self.toggle_negation)
         self.negate_btn.setStyleSheet(f"""
-            QPushButton:checked {{ background-color: red; color: white; border: 1px solid red; }}
             QPushButton {{ 
-                padding: 5px 10px;
-                border-radius: 4px;
+                background-color: #161622;
+                border: 1px solid #2c2c3e;
+                color: #a1a1aa;
+                padding: 6px 12px;
+                border-radius: 6px;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: #222230;
+                color: #ffffff;
+                border-color: #0078d4;
+            }}
+            QPushButton:checked {{
+                background-color: #ef4444;
+                color: white;
+                border-color: #ef4444;
+            }}
+            QPushButton:checked:hover {{
+                background-color: #dc2626;
+                border-color: #dc2626;
             }}
         """)
         header_layout.addWidget(self.negate_btn)
@@ -209,7 +211,7 @@ class SearchView(QWidget):
 
     def create_icon_label(self, icon_path):
         lbl = QLabel()
-        pm = create_colored_pixmap(icon_path, Qt.GlobalColor.black)
+        pm = create_colored_pixmap(icon_path, QColor("#0078d4"))
         lbl.setPixmap(pm)
         lbl.setFixedSize(30, 30)
         return lbl
@@ -220,16 +222,18 @@ class SearchView(QWidget):
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: #f0f0f0;
-                border: 1px solid #d0d0d0;
-                padding: 6px 12px;
+                background-color: #161622;
+                border: 1px solid #2c2c3e;
+                padding: 8px 16px;
                 text-align: left;
-                border-radius: 6px;
-                color: #333333;
+                border-radius: 8px;
+                color: #e4e4e7;
+                font-weight: 500;
             }}
             QPushButton:hover {{
-                background-color: #e0e0e0;
-                border-color: #b0b0b0;
+                background-color: #002d54;
+                border-color: #0078d4;
+                color: #ffffff;
             }}
         """)
         return btn
