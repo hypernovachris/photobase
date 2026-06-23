@@ -133,16 +133,8 @@ class Database:
       )
     """)
 
-    # Automatic trigger to clean up orphaned tags when relations are removed
-    self.cursor.execute("""
-      CREATE TRIGGER IF NOT EXISTS cleanup_tags_after_image_tag_delete
-      AFTER DELETE ON image_tags
-      BEGIN
-          DELETE FROM tags
-          WHERE id = OLD.tag_id
-            AND NOT EXISTS (SELECT 1 FROM image_tags WHERE tag_id = OLD.tag_id);
-      END;
-    """)
+    # Drop cleanup trigger to prevent deletion of orphaned tags
+    self.cursor.execute("DROP TRIGGER IF EXISTS cleanup_tags_after_image_tag_delete")
 
     self.connection.commit()
 

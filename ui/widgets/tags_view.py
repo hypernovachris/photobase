@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QScrollArea, QFrame, 
-    QGridLayout, QInputDialog, QMessageBox, QMenu
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QFrame, 
+    QGridLayout, QInputDialog, QMessageBox, QMenu, QPushButton
 )
 from PyQt6.QtCore import Qt, pyqtSlot, QSize, QRect, QUrl
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QAction, QMouseEvent, QIcon, QPen, QPainterPath
@@ -121,6 +121,11 @@ class TagCard(QWidget):
         rename_action = QAction("Rename", self)
         rename_action.triggered.connect(self.rename_tag_action)
         menu.addAction(rename_action)
+        
+        delete_action = QAction("Delete", self)
+        delete_action.triggered.connect(self.delete_tag_action)
+        menu.addAction(delete_action)
+        
         menu.exec(event.globalPos())
 
     def rename_tag_action(self):
@@ -136,9 +141,88 @@ class TagCard(QWidget):
                 return
 
             # Call model to rename
-            # We need the tag ID. 
             tag_id = self.tag_data['id']
             self.gallery_model.rename_tag(tag_id, new_name)
+
+    def delete_tag_action(self):
+        tag_name = self.tag_data['name']
+        tag_id = self.tag_data['id']
+        
+        confirm = QMessageBox.question(
+            self,
+            "Delete Tag",
+            f"Are you sure you want to delete the tag '{tag_name}'? This will remove the tag from all associated photos.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if confirm == QMessageBox.StandardButton.Yes:
+            self.gallery_model.delete_tag(tag_id)
+
+class CreateTagCard(QWidget):
+    def __init__(self, on_click, parent=None):
+        super().__init__(parent)
+        self.on_click = on_click
+        self.setFixedSize(160, 200)
+        self.setMouseTracking(True)
+        self.is_hovered = False
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        
+        rect = self.rect()
+        bg_color = QColor("#222230") if self.is_hovered else QColor("#161622")
+        border_color = QColor("#0078d4") if self.is_hovered else QColor("#2c2c3e")
+        
+        # Draw rounded card background
+        painter.setBrush(bg_color)
+        painter.setPen(QPen(border_color, 1))
+        painter.drawRoundedRect(rect.adjusted(2, 2, -2, -2), 12, 12)
+        
+        # Image Area
+        img_rect = QRect(10, 10, 140, 140)
+        
+        # Paint background for image
+        painter.setBrush(QColor("#2d2d3d"))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(img_rect, 8, 8)
+        
+        # Draw Plus Sign
+        painter.setPen(QColor("#0078d4") if self.is_hovered else QColor("#9ca3af"))
+        font = painter.font()
+        font.setPointSize(48)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(img_rect, Qt.AlignmentFlag.AlignCenter, "+")
+        
+        # Tag Name Text
+        font = painter.font()
+        font.setPointSize(11)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(QColor("#ffffff"))
+        painter.drawText(QRect(10, 155, 140, 22), Qt.AlignmentFlag.AlignCenter, "Create Tag")
+        
+        # Description/Helper text
+        font.setBold(False)
+        font.setPointSize(9)
+        painter.setFont(font)
+        painter.setPen(QColor("#71717a"))
+        painter.drawText(QRect(10, 177, 140, 18), Qt.AlignmentFlag.AlignCenter, "Add a new tag")
+
+    def enterEvent(self, event):
+        self.is_hovered = True
+        self.update()
+
+    def leaveEvent(self, event):
+        self.is_hovered = False
+        self.update()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.on_click()
 
 class TagsView(QWidget):
     def __init__(self, parent=None):
@@ -146,8 +230,15 @@ class TagsView(QWidget):
         self.gallery_model = GalleryModel.instance()
         self.thumbnail_generator = ThumbnailGenerator.instance()
         
+        self.needs_refresh = True
+        
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
+        
+        # Title Label
+        title_label = QLabel("Tags")
+        title_label.setStyleSheet("color: #ffffff; font-size: 20px; font-weight: bold; margin: 15px 15px 5px 15px;")
+        self.layout.addWidget(title_label)
         
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -159,42 +250,45 @@ class TagsView(QWidget):
         self.scroll_area.setWidget(self.content_widget)
         self.layout.addWidget(self.scroll_area)
         
-        # Placeholder Label for Empty Tags
-        self.placeholder_label = QLabel("No tags found. Add tags to your photos via the context menu in the Gallery view.")
-        self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.placeholder_label.setStyleSheet("color: #71717a; font-size: 14px; font-style: italic; padding: 20px;")
-        self.placeholder_label.setWordWrap(True)
-        self.layout.addWidget(self.placeholder_label)
-        self.placeholder_label.hide()
-        
         # Connect Signals
-        self.gallery_model.tagsChanged.connect(self.refresh_tags)
+        self.gallery_model.tagsChanged.connect(self.on_tags_changed)
         #self.thumbnail_generator.thumbnailReady.connect(self.on_thumbnail_ready)
         
         self.tag_cards = []
-        self.refresh_tags()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if self.needs_refresh:
+            self.refresh_tags()
+
+    def on_tags_changed(self):
+        if self.isVisible():
+            self.refresh_tags()
+        else:
+            self.needs_refresh = True
 
     def refresh_tags(self):
+        self.needs_refresh = False
         # Clear
         while self.flow_layout.count():
             item = self.flow_layout.takeAt(0)
             if item.widget():
+                item.widget().setParent(None)
                 item.widget().deleteLater()
         self.tag_cards = []
         
         # Get data
         tags_model = self.gallery_model.get_all_tags_model() # List of dicts
         
-        if not tags_model:
-            self.placeholder_label.show()
-            self.scroll_area.hide()
-        else:
-            self.placeholder_label.hide()
-            self.scroll_area.show()
-            for tag_data in tags_model:
-                card = TagCard(tag_data, self.on_tag_clicked)
-                self.flow_layout.addWidget(card)
-                self.tag_cards.append(card)
+        for tag_data in tags_model:
+            card = TagCard(tag_data, self.on_tag_clicked)
+            self.flow_layout.addWidget(card)
+            self.tag_cards.append(card)
+
+        # Add the Create Tag Card at the end
+        create_card = CreateTagCard(self.create_new_tag)
+        self.flow_layout.addWidget(create_card)
+        self.tag_cards.append(create_card)
 
     def on_tag_clicked(self, tag_name):
         self.gallery_model.set_tag_filter(tag_name)
@@ -206,3 +300,10 @@ class TagsView(QWidget):
         for card in self.tag_cards:
             if card.tag_data['coverPath'] == file_path:
                 card.set_thumbnail(thumb_path)
+
+    def create_new_tag(self):
+        name, ok = QInputDialog.getText(self, "Create New Tag", "New Tag name:")
+        if ok and name:
+            name = name.strip()
+            if name:
+                self.gallery_model.add_new_tag(name)

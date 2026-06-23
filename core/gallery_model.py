@@ -421,9 +421,6 @@ class GalleryModel(QAbstractListModel):
     def get_all_tags_model(self):
         """Returns a list of dictionaries for QML: name, count, thumbnail"""
         db.connect()
-        # Clean up tags before fetching
-        db.tags.cleanup_orphan_tags()
-        
         # Returns [(name, count, cover_path, cover_thumb_path), ...]
         rows = db.tags.get_tags_with_metadata()
         db.close()
@@ -487,6 +484,37 @@ class GalleryModel(QAbstractListModel):
         if success:
             db.commit()
             self.tagsChanged.emit()
+        db.close()
+
+    @pyqtSlot(int)
+    def delete_tag(self, tag_id):
+        db.connect()
+        # Find tag name first to check active filters
+        db.tags.cursor.execute("SELECT name FROM tags WHERE id = ?", (tag_id,))
+        row = db.tags.cursor.fetchone()
+        tag_name = row[0] if row else None
+        
+        success = db.tags.delete_tag(tag_id)
+        if success:
+            db.commit()
+            self.tagsChanged.emit()
+            
+            # If the deleted tag was in the active filter, clear it
+            if tag_name:
+                was_active = False
+                new_filters = []
+                for f in self._active_filters:
+                    if f.get('type') == 'tag' and f.get('value') == tag_name:
+                        was_active = True
+                    else:
+                        new_filters.append(f)
+                
+                if was_active:
+                    self._active_filters = new_filters
+                    if self._active_filter_name == tag_name:
+                        self._active_filter_name = ""
+                    self.load_images()
+                    self.filterChanged.emit(self._active_filter_name)
         db.close()
         
     @pyqtSlot(result=str)

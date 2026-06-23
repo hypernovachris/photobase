@@ -221,6 +221,16 @@ QListWidget::item:hover:!selected {
     color: #f3f4f6;
 }
 
+QDialog QListWidget::item:selected {
+    background-color: transparent;
+    color: #ffffff;
+}
+
+QDialog QListWidget::item:hover {
+    background-color: #27273a;
+    color: #ffffff;
+}
+
 /* Context Menus */
 QMenu {
     background-color: #161622;

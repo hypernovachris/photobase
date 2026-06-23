@@ -2,14 +2,6 @@ import sqlite3
 from .base_repository import BaseRepository
 
 class TagRepository(BaseRepository):
-    def cleanup_orphan_tags(self):
-        # Remove image_tags for non-existent images (referential integrity)
-        self.cursor.execute("DELETE FROM image_tags WHERE image_id NOT IN (SELECT id FROM images)")
-        
-        # Remove tags that have no associated images
-        self.cursor.execute("DELETE FROM tags WHERE id NOT IN (SELECT DISTINCT tag_id FROM image_tags)")
-        
-        self.connection.commit()
 
     def get_or_create_tag(self, name):
         name = name.strip()
@@ -47,13 +39,6 @@ class TagRepository(BaseRepository):
 
     def remove_tag_from_image(self, image_id, tag_id):
         self.cursor.execute("DELETE FROM image_tags WHERE image_id = ? AND tag_id = ?", (image_id, tag_id))
-        
-        # Check if any images are still using this tag
-        self.cursor.execute("SELECT COUNT(*) FROM image_tags WHERE tag_id = ?", (tag_id,))
-        count = self.cursor.fetchone()[0]
-        
-        if count == 0:
-            self.cursor.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
 
     def get_tags_for_image(self, image_id):
         self.cursor.execute("""
@@ -95,8 +80,15 @@ class TagRepository(BaseRepository):
           FROM tags t
           LEFT JOIN image_tags it ON t.id = it.tag_id
           GROUP BY t.id
-          HAVING cnt > 0
           ORDER BY t.name
         """
         self.cursor.execute(query)
         return self.cursor.fetchall()
+
+    def delete_tag(self, tag_id):
+        try:
+            self.cursor.execute("DELETE FROM image_tags WHERE tag_id = ?", (tag_id,))
+            self.cursor.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
+            return True
+        except sqlite3.Error:
+            return False

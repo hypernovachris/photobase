@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QListWidget, QDialogButtonBox, QCheckBox, 
     QListWidgetItem, QWidget
 )
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSlot, QSize
 from core.gallery_model import GalleryModel
 
 class TagEditDialog(QDialog):
@@ -46,6 +46,7 @@ class TagEditDialog(QDialog):
         
         # Tags List
         self.tags_list_widget = QListWidget()
+        self.tags_list_widget.itemClicked.connect(self.on_item_clicked)
         layout.addWidget(self.tags_list_widget)
         
         # Buttons
@@ -72,19 +73,22 @@ class TagEditDialog(QDialog):
     def refresh_list(self):
         self.tags_list_widget.clear()
         for tag in self.all_tags:
-            item = QListWidgetItem(tag)
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            
-            check_state = Qt.CheckState.Checked if self.tags_state.get(tag, False) else Qt.CheckState.Unchecked
-            item.setCheckState(check_state)
-            
+            item = QListWidgetItem()
+            item.setSizeHint(QSize(100, 36))
             self.tags_list_widget.addItem(item)
             
-        self.tags_list_widget.itemChanged.connect(self.on_item_changed)
+            cb = QCheckBox(tag)
+            cb.setChecked(self.tags_state.get(tag, False))
+            cb.setStyleSheet("background: transparent; color: #e4e4e7; font-size: 13px; margin: 0px;")
+            cb.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            
+            self.tags_list_widget.setItemWidget(item, cb)
 
-    def on_item_changed(self, item):
-        tag = item.text()
-        self.tags_state[tag] = (item.checkState() == Qt.CheckState.Checked)
+    def on_item_clicked(self, item):
+        cb = self.tags_list_widget.itemWidget(item)
+        if cb:
+            cb.setChecked(not cb.isChecked())
+            self.tags_state[cb.text()] = cb.isChecked()
 
     def add_new_tag(self):
         name = self.new_tag_input.text().strip()
