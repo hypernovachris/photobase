@@ -60,7 +60,9 @@ class FlowLayout(QLayout):
         for item in self._item_list:
             size = size.expandedTo(item.minimumSize())
 
-        size += QSize(2 * self.contentsMargins().top(), 2 * self.contentsMargins().top())
+        margins = self.contentsMargins()
+        margin_top = margins.top()
+        size += QSize(2 * margin_top, 2 * margin_top)
         return size
 
     def _do_layout(self, rect, test_only):
@@ -76,8 +78,22 @@ class FlowLayout(QLayout):
         line_height = 0
         spacing = self.spacing()
 
-        for item in self._item_list:
-            style = item.widget().style()
+        # Retrieve the style to calculate layout spacing outside of the loop
+        style = None
+        parent_widget = self.parentWidget()
+        if parent_widget:
+            style = parent_widget.style()
+        if not style:
+            for item in self._item_list:
+                widget = item.widget()
+                if widget:
+                    style = widget.style()
+                    break
+        if not style:
+            from PyQt6.QtWidgets import QApplication
+            style = QApplication.style()
+
+        if style:
             layout_spacing_x = style.layoutSpacing(
                 QSizePolicy.ControlType.PushButton, QSizePolicy.ControlType.PushButton,
                 Qt.Orientation.Horizontal
@@ -86,19 +102,34 @@ class FlowLayout(QLayout):
                 QSizePolicy.ControlType.PushButton, QSizePolicy.ControlType.PushButton,
                 Qt.Orientation.Vertical
             )
-            space_x = spacing + layout_spacing_x
-            space_y = spacing + layout_spacing_y
-            next_x = x + item.sizeHint().width() + space_x
-            if next_x - space_x > effective_rect.right() and line_height > 0:
+        else:
+            layout_spacing_x = 0
+            layout_spacing_y = 0
+
+        space_x = spacing + layout_spacing_x
+        space_y = spacing + layout_spacing_y
+        effective_right = effective_rect.right()
+
+        for item in self._item_list:
+            widget = item.widget()
+            if not widget:
+                continue
+
+            size_hint = item.sizeHint()
+            w = size_hint.width()
+            h = size_hint.height()
+            
+            next_x = x + w + space_x
+            if next_x - space_x > effective_right and line_height > 0:
                 x = effective_rect.x()
                 y = y + line_height + space_y
-                next_x = x + item.sizeHint().width() + space_x
+                next_x = x + w + space_x
                 line_height = 0
 
             if not test_only:
-                item.setGeometry(QRect(QPoint(x, y), item.sizeHint()))
+                item.setGeometry(QRect(QPoint(x, y), size_hint))
 
             x = next_x
-            line_height = max(line_height, item.sizeHint().height())
+            line_height = max(line_height, h)
 
         return y + line_height - rect.y() + bottom

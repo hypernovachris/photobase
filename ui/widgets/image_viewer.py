@@ -563,7 +563,7 @@ class ImageViewer(QWidget):
         # Debounce timer for async image and metadata loading
         self.debounce_timer = QTimer(self)
         self.debounce_timer.setSingleShot(True)
-        self.debounce_timer.setInterval(150) # 150ms debounce
+        self.debounce_timer.setInterval(50) # 50ms debounce
         self.debounce_timer.timeout.connect(self.on_debounce_timeout)
         
         self.setMouseTracking(True)
