@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSlot, QSize, QTimer, QEvent, QRectF, pyqtSignal, QPointF, QPoint, QThread
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QAction, QColor, QBrush, QPen, QCursor, QImageReader
 from ui.widgets.tag_edit_dialog import TagEditDialog
-from core.heic_provider import load_heic_to_qimage
+from core.heic_provider import load_pil_image_to_qimage
 from core.gallery_model import GalleryModel
 from ui.widgets.util.flow_layout import FlowLayout
 import os
@@ -476,8 +476,8 @@ class ImageLoaderThread(QThread):
         try:
             lower_path = self.path.lower()
             qimg = None
-            if lower_path.endswith('.heic') or lower_path.endswith('.heif'):
-                qimg = load_heic_to_qimage(self.path)
+            if lower_path.endswith(('.heic', '.heif', '.avif', '.jxl')):
+                qimg = load_pil_image_to_qimage(self.path)
             else:
                 reader = QImageReader(self.path)
                 reader.setAutoTransform(True)
@@ -748,10 +748,17 @@ class ImageViewer(QWidget):
     def get_image_dimensions(self, path):
         try:
             lower_path = path.lower()
-            if lower_path.endswith('.heic') or lower_path.endswith('.heif'):
+            if lower_path.endswith(('.heic', '.heif', '.avif', '.jxl')):
                 from PIL import Image
                 with Image.open(path) as img:
-                    return img.size
+                    size = img.size
+                    try:
+                        exif = img.getexif()
+                        if exif and exif.get(274) in (5, 6, 7, 8):
+                            return size[1], size[0]
+                    except Exception:
+                        pass
+                    return size
             else:
                 reader = QImageReader(path)
                 if reader.supportsOption(QImageReader.ImageOption.Size):
@@ -760,7 +767,14 @@ class ImageViewer(QWidget):
                         return sz.width(), sz.height()
                 from PIL import Image
                 with Image.open(path) as img:
-                    return img.size
+                    size = img.size
+                    try:
+                        exif = img.getexif()
+                        if exif and exif.get(274) in (5, 6, 7, 8):
+                            return size[1], size[0]
+                    except Exception:
+                        pass
+                    return size
         except Exception:
             return None
 

@@ -5,6 +5,8 @@ from PIL import Image, ExifTags
 from core.database import db
 from PyQt6.QtCore import QDir
 import pillow_heif
+import pillow_avif
+import pillow_jxl
 
 pillow_heif.register_heif_opener()
 
@@ -159,7 +161,7 @@ class ImageScanner:
     # print(f"Scan completed in {time.time() - start_time:.2f} seconds.")
   
   def is_image(self, file_path):
-    valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".heic", ".heif"]
+    valid_extensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".heic", ".heif", ".webp", ".avif", ".jxl"]
     return any(file_path.lower().endswith(ext) for ext in valid_extensions)
 
 

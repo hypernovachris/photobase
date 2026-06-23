@@ -2,18 +2,23 @@ from PyQt6.QtQuick import QQuickImageProvider
 from PyQt6.QtGui import QImage
 from PyQt6.QtCore import QSize
 import pillow_heif
-from PIL import Image
+import pillow_avif
+import pillow_jxl
+from PIL import Image, ImageOps
 import os
 from urllib.parse import unquote
 
 
-def load_heic_to_qimage(file_path):
+def load_pil_image_to_qimage(file_path):
     if not os.path.exists(file_path):
           return QImage()
 
     try:
-        # Open with Pillow (pillow-heif registered)
+        # Open with Pillow
         pil_img = Image.open(file_path)
+        
+        # Auto-orient based on EXIF
+        pil_img = ImageOps.exif_transpose(pil_img)
         
         # Force load to catch decoding errors
         pil_img.load()
@@ -34,10 +39,12 @@ def load_heic_to_qimage(file_path):
         return qimg
 
     except Exception as e:
-        print(f"Error loading HEIC {file_path}: {e}")
-        # import traceback
-        # traceback.print_exc()
+        print(f"Error loading image via PIL {file_path}: {e}")
         return QImage()
+
+
+def load_heic_to_qimage(file_path):
+    return load_pil_image_to_qimage(file_path)
 
 class HeicImageProvider(QQuickImageProvider):
     def __init__(self):
