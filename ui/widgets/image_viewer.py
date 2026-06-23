@@ -2,7 +2,8 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QStyleOptionGraphicsItem,
     QPushButton, QFrame, QScrollArea, QListWidget, 
-    QDialog, QSizePolicy, QGraphicsOpacityEffect, QStackedLayout
+    QDialog, QSizePolicy, QGraphicsOpacityEffect, QStackedLayout,
+    QMessageBox, QProgressDialog
 )
 from PyQt6.QtCore import Qt, pyqtSlot, QSize, QTimer, QEvent, QRectF, pyqtSignal, QPointF, QPoint, QThread
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QIcon, QAction, QColor, QBrush, QPen, QCursor, QImageReader
@@ -528,7 +529,8 @@ class ImageViewer(QWidget):
         self.current_path = ""
         self.controls_visible = True
         
-        self.setStyleSheet("background-color: black;")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("ImageViewer { background-color: black; }")
         
         self.layout = QHBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -582,6 +584,11 @@ class ImageViewer(QWidget):
         self.esc_act.setShortcut("Esc")
         self.esc_act.triggered.connect(self.on_escape)
         self.addAction(self.esc_act)
+
+        self.del_act = QAction(self)
+        self.del_act.setShortcut("Delete")
+        self.del_act.triggered.connect(self.delete_current_image)
+        self.addAction(self.del_act)
 
     def setup_overlays(self):
         # Back Button (Top Left)
@@ -877,3 +884,95 @@ class ImageViewer(QWidget):
         prev_path = self.gallery_model.get_previous_image_path(self.current_path)
         if prev_path:
             self.open(prev_path)
+
+    def delete_current_image(self):
+        if not self.current_path or not os.path.exists(self.current_path):
+            return
+
+        # Determine the next image path to navigate to *before* deletion starts.
+        next_path = self.gallery_model.get_next_image_path(self.current_path)
+        if not next_path:
+            # If no next image, try the previous image
+            next_path = self.gallery_model.get_previous_image_path(self.current_path)
+
+        self.next_path_after_delete = next_path
+
+        from ui.widgets.util.recycle_worker import can_recycle_path, RecycleWorker
+
+        selected = [self.current_path]
+
+        # 1. Pre-check if the file can be recycled
+        permanent_mode = False
+        if any(not can_recycle_path(path) for path in selected):
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("Warning")
+            msg_box.setText("The selected item cannot be recycled. Proceeding with this action will permanently delete it. Proceed anyway?")
+            proceed_button = msg_box.addButton("Proceed Anyway", QMessageBox.ButtonRole.AcceptRole)
+            cancel_button = msg_box.addButton(QMessageBox.StandardButton.Cancel)
+            msg_box.setDefaultButton(cancel_button)
+            msg_box.exec()
+
+            if msg_box.clickedButton() == cancel_button:
+                return
+            permanent_mode = True
+
+        # 2. Confirmation dialogue
+        confirm_box = QMessageBox(self)
+        confirm_box.setWindowTitle("Confirm Action")
+        if permanent_mode:
+            confirm_box.setText("Permanently delete this item?")
+        else:
+            confirm_box.setText("Recycle this item?")
+
+        yes_button = confirm_box.addButton(QMessageBox.StandardButton.Yes)
+        cancel_button = confirm_box.addButton(QMessageBox.StandardButton.Cancel)
+        confirm_box.setDefaultButton(cancel_button)
+        confirm_box.exec()
+
+        if confirm_box.clickedButton() == cancel_button:
+            return
+
+        # 3. Show non-cancelable window-modal progress bar dialog
+        self.progress_dialog = QProgressDialog("Deleting files...", None, 0, len(selected), self)
+        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.progress_dialog.show()
+
+        # 4. Start worker
+        self.worker = RecycleWorker(selected, permanent_mode)
+        self.worker.progress.connect(self.progress_dialog.setValue)
+        self.worker.fileRemoved.connect(self.gallery_model.handle_file_removed)
+        self.worker.finished.connect(lambda succeeded: self.on_recycle_finished(succeeded, permanent_mode))
+        self.worker.error.connect(lambda err_msg, succeeded, total: self.on_recycle_error(err_msg, succeeded, total, permanent_mode))
+        self.worker.start()
+
+    def on_recycle_finished(self, succeeded, permanent_mode):
+        self.progress_dialog.close()
+
+        self.gallery_model.clear_selection()
+        self.gallery_model.refresh()
+
+        if succeeded > 0:
+            if self.next_path_after_delete:
+                self.open(self.next_path_after_delete)
+            else:
+                self.closeRequested.emit()
+
+    def on_recycle_error(self, err_msg, succeeded, total, permanent_mode):
+        self.progress_dialog.close()
+
+        action_text = "permanently deleted" if permanent_mode else "recycled"
+        QMessageBox.warning(
+            self,
+            "Error",
+            f"An error occurred. {succeeded}/{total} items were {action_text}"
+        )
+
+        self.gallery_model.clear_selection()
+        self.gallery_model.refresh()
+
+        # If we succeeded partially and the deleted file was the current image, we should probably update
+        if succeeded > 0 and not os.path.exists(self.current_path):
+            if self.next_path_after_delete:
+                self.open(self.next_path_after_delete)
+            else:
+                self.closeRequested.emit()
