@@ -57,7 +57,7 @@ class TagCard(QWidget):
         img_rect = QRect(10, 10, 140, 140)
         
         # Paint background for image if not loaded
-        painter.setBrush(QColor("#2d2d3d"))
+        painter.setBrush(QColor("#0078d4"))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawRoundedRect(img_rect, 8, 8)
         
@@ -75,10 +75,9 @@ class TagCard(QWidget):
             painter.restore()
         else:
             # Draw placeholder icon/text (e.g. tag icon or initial)
-            painter.setPen(QColor("#0078d4"))
+            painter.setPen(QColor("#ffffff"))
             font = painter.font()
-            font.setPointSize(28)
-            font.setBold(True)
+            font.setPointSize(45)
             painter.setFont(font)
             # Draw the first letter of the tag
             initial = self.tag_data['name'][0].upper() if self.tag_data['name'] else "#"

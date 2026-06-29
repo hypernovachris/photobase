@@ -217,23 +217,20 @@ class TagChip(QFrame):
         layout.addWidget(label)
         
         # Remove Button
-        btn = QPushButton("×")
-        btn.setFixedSize(16, 16)
+        btn = QPushButton()
+        btn.setIcon(QIcon("assets/icons/x.svg"))
+        btn.setIconSize(QSize(18, 18))
+        btn.setFixedSize(20, 20)
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(lambda: self.removeRequested.emit(self.text))
         btn.setStyleSheet("""
             QPushButton {
-                color: #aaa;
                 border: none;
                 background: transparent;
-                font-size: 14px;
-                font-weight: bold;
-                padding-bottom: 2px;
             }
             QPushButton:hover {
-                color: #fff;
                 background: rgba(255, 255, 255, 30);
-                border-radius: 8px;
+                border-radius: 10px;
             }
         """)
         layout.addWidget(btn)

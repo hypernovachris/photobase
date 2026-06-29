@@ -1,12 +1,47 @@
-from PyQt6.QtWidgets import QListView, QMenu, QFileDialog, QProgressDialog, QMessageBox
-from PyQt6.QtCore import Qt, QSize, QTimer
-from PyQt6.QtGui import QAction, QCursor
+from PyQt6.QtWidgets import QListView, QMenu, QFileDialog, QProgressDialog, QMessageBox, QWidget
+from PyQt6.QtCore import Qt, QSize, QTimer, QPoint
+from PyQt6.QtGui import QAction, QCursor, QPainter, QColor
 from core.gallery_model import GalleryModel
 from core.thumbnail_generator import ThumbnailGenerator
 from ui.widgets.tag_edit_dialog import TagEditDialog
 from ui.widgets.util.recycle_worker import can_recycle_path, RecycleWorker
 from ui.widgets.util.move_worker import MoveWorker
 import os
+
+class StickyHeader(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.text = ""
+        self.setFixedHeight(50)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        
+    def set_text(self, text):
+        if self.text != text:
+            self.text = text
+            self.update()
+            
+    def paintEvent(self, event):
+        if not self.text:
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        
+        # Solid background matching the gallery background (#0f0f13)
+        painter.fillRect(self.rect(), QColor("#0f0f13"))
+        
+        # Left indicator bar (matching our styled delegates)
+        # painter.fillRect(10, 15, 4, 20, QColor("#0078d4")) # Since we decided not to do left accent bar on headers in gallery view, we don't draw it here to stay consistent with month headers.
+        
+        # Pen color and font
+        painter.setPen(QColor("#e4e4e7"))
+        font = painter.font()
+        font.setBold(True)
+        font.setPointSize(14)
+        painter.setFont(font)
+        
+        # Position text slightly offset
+        text_rect = self.rect().adjusted(10, 10, -10, -10)
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.text)
 
 class GalleryListView(QListView):
     THUMB_SIZE = 128
@@ -17,6 +52,10 @@ class GalleryListView(QListView):
         super().__init__(parent)
         self.gallery_model = GalleryModel.instance()
         self.thumbnail_generator = ThumbnailGenerator.instance()
+        
+        # Initialize Sticky Header
+        self.sticky_header = StickyHeader(self.viewport())
+        self.sticky_header.hide()
         
         self.setMouseTracking(True)
         self.setSelectionMode(QListView.SelectionMode.NoSelection) # We handle custom selection
@@ -36,10 +75,20 @@ class GalleryListView(QListView):
         self.scroll_timer.timeout.connect(self.on_scroll_timeout)
         self.verticalScrollBar().valueChanged.connect(self.on_scroll)
 
+    def setModel(self, model):
+        super().setModel(model)
+        if model:
+            model.layoutChanged.connect(self.update_sticky_header)
+            model.modelReset.connect(self.update_sticky_header)
+            model.rowsInserted.connect(self.update_sticky_header)
+            model.rowsRemoved.connect(self.update_sticky_header)
+        self.update_sticky_header()
+
     def on_scroll(self):
         # Cancel any pending requests while active scrolling is happening
         self.thumbnail_generator.clearQueue()
         self.scroll_timer.start(80) # 80ms debounce
+        self.update_sticky_header()
 
     def on_scroll_timeout(self):
         # Clear out "not found" flags from delegate cache to allow re-requesting only for visible ones
@@ -62,6 +111,7 @@ class GalleryListView(QListView):
         cols = max(1, (width - self.SPACING) // self.COL_WIDTH)
         self.gallery_model.set_columns(cols)
         self.update_max_queue_size()
+        self.update_sticky_header()
 
     def _get_image_at_pos(self, pos):
         index = self.indexAt(pos)
@@ -134,7 +184,7 @@ class GalleryListView(QListView):
 
         # Remove from current tag filter
         active_filters = self.gallery_model.active_filters
-        if len(active_filters) == 1 and active_filters[0].get('type') == 'tag':
+        if len(active_filters) == 1 and active_filters[0].get('type') == 'tag' and not active_filters[0].get('negated', False):
             tag_name = active_filters[0].get('value')
             remove_action = QAction(f"Remove from {tag_name}", self)
             remove_action.triggered.connect(lambda: self.gallery_model.remove_tag_from_selection(tag_name))
@@ -236,3 +286,51 @@ class GalleryListView(QListView):
         self.progress_dialog.close()
         self.gallery_model.clear_selection()
         self.gallery_model.refresh()
+
+    def get_active_header(self):
+        # Find index at top left of viewport
+        top_left_index = self.indexAt(QPoint(10, 5))
+        if not top_left_index.isValid():
+            return None, None
+            
+        row = top_left_index.row()
+        # Go backwards to find the nearest header
+        for r in range(row, -1, -1):
+            idx = self.model().index(r, 0)
+            item = idx.data(Qt.ItemDataRole.UserRole)
+            if item and item.get("type") == "header":
+                return item.get("month_text", ""), r
+                
+        return None, None
+
+    def update_sticky_header(self):
+        if not self.model() or self.model().rowCount() == 0:
+            self.sticky_header.hide()
+            return
+            
+        month_text, active_row = self.get_active_header()
+        if not month_text:
+            self.sticky_header.hide()
+            return
+            
+        # Find next header to compute push offset
+        next_header_row = -1
+        for r in range(active_row + 1, self.model().rowCount()):
+            idx = self.model().index(r, 0)
+            item = idx.data(Qt.ItemDataRole.UserRole)
+            if item and item.get("type") == "header":
+                next_header_row = r
+                break
+                
+        offset_y = 0
+        H = 50 # Header height
+        if next_header_row != -1:
+            next_idx = self.model().index(next_header_row, 0)
+            rect = self.visualRect(next_idx)
+            if rect.y() < H:
+                offset_y = rect.y() - H
+                
+        self.sticky_header.set_text(month_text)
+        self.sticky_header.setGeometry(0, offset_y, self.viewport().width(), H)
+        self.sticky_header.show()
+        self.sticky_header.raise_()
